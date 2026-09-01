@@ -1,0 +1,49 @@
+schema_version: "1.0"
+battery_profile:
+  profile_id: "batt_lto_10s1p_robot"
+  display_name: "LTO 23V 10S1P High-Rate Robotics Pack"
+  manufacturer: "TitanVolt Robotics"
+  model_name: "TV-LTO-23V-10AH"
+  chemistry: "LTO"
+  topology:
+    series_count: 10
+    parallel_count: 1
+    total_cells: 10
+  cell_profile:
+    cell_id: "cell_lto_cylindrical_10ah"
+    chemistry: "LTO"
+    form_factor: "CYLINDRICAL"
+    nominal_voltage_v: 2.3
+    min_voltage_v: 1.5
+    max_voltage_v: 2.8
+    nominal_capacity_ah: 10.0
+    nominal_internal_resistance_mohm: 1.2
+    mass_kg: 0.35
+  ratings:
+    nominal_pack_voltage_v: 23.0
+    nominal_cell_voltage_v: 2.3
+    nominal_capacity_ah: 10.0
+    nominal_energy_wh: 230.0
+  voltage_limits:
+    cell_min_cutoff_v: 1.5
+    cell_max_cutoff_v: 2.8
+    pack_min_cutoff_v: 15.0
+    pack_max_cutoff_v: 28.0
+  current_limits:
+    max_continuous_charge_a: 50.0
+    max_continuous_discharge_a: 100.0
+    peak_pulse_charge_a: 100.0
+    peak_pulse_discharge_a: 150.0
+  thermal_limits:
+    min_charge_temp_c: -20.0
+    max_charge_temp_c: 55.0
+    min_discharge_temp_c: -30.0
+    max_discharge_temp_c: 65.0
+    thermal_warning_temp_c: 65.0
+    critical_thermal_runaway_temp_c: 85.0
+  balancing:
+    balancing_delta_v_threshold_mv: 15.0
+    balancing_enabled: true
+  metadata:
+    c_rate_charge_max: "5C"
+    c_rate_discharge_max: "10C"

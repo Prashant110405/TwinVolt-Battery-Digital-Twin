@@ -1,0 +1,132 @@
+# ==============================================================================
+# TwinVolt — Universal Battery Digital Twin Platform
+# Comprehensive Git Ignore Configuration
+# ==============================================================================
+
+# --- Environment & Local Secrets ---
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+secrets/
+credentials.json
+
+# --- Python: Bytecode & Caches ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# --- Python: Virtual Environments ---
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# --- Python: Testing, Linting & Type Checking ---
+.pytest_cache/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.ruff_cache/
+.mypy_cache/
+.pytype/
+.pyre/
+.pytype/
+.tox/
+.nox/
+htmlcov/
+
+# --- Node / Frontend Artifacts ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.next/
+out/
+.nuxt/
+.vuepress/dist
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port
+.vite/
+storybook-static/
+
+# --- IDEs & Editors ---
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.sublime-workspace
+*.sublime-project
+*.swp
+*.swo
+*~
+*.bak
+
+# --- Operating System Artifacts ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# --- Jupyter Notebooks ---
+.ipynb_checkpoints/
+*-checkpoint.ipynb
+
+# --- Logs, Telemetry & Temporary Databases ---
+*.log
+logs/
+*.sqlite
+*.sqlite3
+*.db
+*.pid
+*.seed
+
+# --- Docker / Local Dev Containers ---
+.docker/
+docker-compose.override.yml
+
+# --- Profiling & Benchmark Dumps ---
+*.prof
+*.pstats
+benchmark_results/

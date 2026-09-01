@@ -1,0 +1,18 @@
+schema_version: "1.0"
+model_configuration:
+  model_id: "ecm_2rc_nmc_standard"
+  paradigm: "ECM_2RC"
+  description: "Dual Polarization Equivalent Circuit Model for NMC cells"
+  sampling:
+    simulation_step_ms: 100
+    solver_type: "explicit_rk4"
+  parameters:
+    series_resistance_r0_mohm: 25.0
+    rc1_resistance_r1_mohm: 15.0
+    rc1_capacitance_c1_f: 1200.0
+    rc2_resistance_r2_mohm: 10.0
+    rc2_capacitance_c2_f: 4500.0
+    thermal_mass_j_per_k: 45.0
+    convective_heat_transfer_w_per_k: 1.2
+  custom_parameters:
+    coulombic_efficiency: 0.995

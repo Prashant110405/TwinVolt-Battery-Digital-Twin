@@ -1,0 +1,48 @@
+schema_version: "1.0"
+battery_profile:
+  profile_id: "batt_lfp_16s1p_bess"
+  display_name: "LFP 48V 16S1P Stationary Energy Storage Module"
+  manufacturer: "BESS Storage Dynamics"
+  model_name: "BSD-LFP-48V-100AH"
+  chemistry: "LFP"
+  topology:
+    series_count: 16
+    parallel_count: 1
+    total_cells: 16
+  cell_profile:
+    cell_id: "cell_lfp_prismatic_100ah"
+    chemistry: "LFP"
+    form_factor: "PRISMATIC"
+    nominal_voltage_v: 3.2
+    min_voltage_v: 2.5
+    max_voltage_v: 3.65
+    nominal_capacity_ah: 100.0
+    nominal_internal_resistance_mohm: 0.5
+    mass_kg: 2.1
+  ratings:
+    nominal_pack_voltage_v: 51.2
+    nominal_cell_voltage_v: 3.2
+    nominal_capacity_ah: 100.0
+    nominal_energy_wh: 5120.0
+  voltage_limits:
+    cell_min_cutoff_v: 2.5
+    cell_max_cutoff_v: 3.65
+    pack_min_cutoff_v: 40.0
+    pack_max_cutoff_v: 58.4
+  current_limits:
+    max_continuous_charge_a: 50.0
+    max_continuous_discharge_a: 100.0
+    peak_pulse_charge_a: 100.0
+    peak_pulse_discharge_a: 200.0
+  thermal_limits:
+    min_charge_temp_c: 0.0
+    max_charge_temp_c: 55.0
+    min_discharge_temp_c: -20.0
+    max_discharge_temp_c: 65.0
+    thermal_warning_temp_c: 65.0
+    critical_thermal_runaway_temp_c: 85.0
+  balancing:
+    balancing_delta_v_threshold_mv: 10.0
+    balancing_enabled: true
+  metadata:
+    application: "telecom_bess_backup"

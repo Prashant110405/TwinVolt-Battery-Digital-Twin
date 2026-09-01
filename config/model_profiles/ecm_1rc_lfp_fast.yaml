@@ -1,0 +1,16 @@
+schema_version: "1.0"
+model_configuration:
+  model_id: "ecm_1rc_lfp_fast"
+  paradigm: "ECM_1RC"
+  description: "Thevenin 1-RC Fast Equivalent Circuit Model for LFP cells"
+  sampling:
+    simulation_step_ms: 50
+    solver_type: "explicit_euler"
+  parameters:
+    series_resistance_r0_mohm: 0.5
+    rc1_resistance_r1_mohm: 0.3
+    rc1_capacitance_c1_f: 15000.0
+    thermal_mass_j_per_k: 210.0
+    convective_heat_transfer_w_per_k: 3.5
+  custom_parameters:
+    coulombic_efficiency: 0.998

@@ -1,0 +1,48 @@
+schema_version: "1.0"
+battery_profile:
+  profile_id: "batt_nmc_3s1p_prototype"
+  display_name: "NMC 18650 3S1P Hardware Prototype Bench"
+  manufacturer: "TwinVolt Prototype Lab"
+  model_name: "TV-PROTO-3S-2200"
+  chemistry: "NMC"
+  topology:
+    series_count: 3
+    parallel_count: 1
+    total_cells: 3
+  cell_profile:
+    cell_id: "cell_nmc_18650"
+    chemistry: "NMC"
+    form_factor: "CYLINDRICAL"
+    nominal_voltage_v: 3.7
+    min_voltage_v: 3.0
+    max_voltage_v: 4.2
+    nominal_capacity_ah: 2.2
+    nominal_internal_resistance_mohm: 25.0
+    mass_kg: 0.045
+  ratings:
+    nominal_pack_voltage_v: 11.1
+    nominal_cell_voltage_v: 3.7
+    nominal_capacity_ah: 2.2
+    nominal_energy_wh: 24.42
+  voltage_limits:
+    cell_min_cutoff_v: 3.0
+    cell_max_cutoff_v: 4.2
+    pack_min_cutoff_v: 9.0
+    pack_max_cutoff_v: 12.6
+  current_limits:
+    max_continuous_charge_a: 2.2
+    max_continuous_discharge_a: 4.4
+    peak_pulse_charge_a: 4.4
+    peak_pulse_discharge_a: 8.8
+  thermal_limits:
+    min_charge_temp_c: 0.0
+    max_charge_temp_c: 45.0
+    min_discharge_temp_c: -20.0
+    max_discharge_temp_c: 60.0
+    thermal_warning_temp_c: 60.0
+    critical_thermal_runaway_temp_c: 80.0
+  balancing:
+    balancing_delta_v_threshold_mv: 15.0
+    balancing_enabled: true
+  metadata:
+    testbench_type: "hardware_validation_source"

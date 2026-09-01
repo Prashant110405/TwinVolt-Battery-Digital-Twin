@@ -1,0 +1,48 @@
+schema_version: "1.0"
+battery_profile:
+  profile_id: "batt_nmc_96s2p_ev"
+  display_name: "NMC 400V 96S2P Automotive EV Traction Pack"
+  manufacturer: "VoltMotion Automotive"
+  model_name: "VM-NMC-400V-100AH"
+  chemistry: "NMC"
+  topology:
+    series_count: 96
+    parallel_count: 2
+    total_cells: 192
+  cell_profile:
+    cell_id: "cell_nmc_pouch_50ah"
+    chemistry: "NMC"
+    form_factor: "POUCH"
+    nominal_voltage_v: 3.7
+    min_voltage_v: 3.0
+    max_voltage_v: 4.2
+    nominal_capacity_ah: 50.0
+    nominal_internal_resistance_mohm: 0.8
+    mass_kg: 0.85
+  ratings:
+    nominal_pack_voltage_v: 355.2
+    nominal_cell_voltage_v: 3.7
+    nominal_capacity_ah: 100.0
+    nominal_energy_wh: 35520.0
+  voltage_limits:
+    cell_min_cutoff_v: 3.0
+    cell_max_cutoff_v: 4.2
+    pack_min_cutoff_v: 288.0
+    pack_max_cutoff_v: 403.2
+  current_limits:
+    max_continuous_charge_a: 100.0
+    max_continuous_discharge_a: 200.0
+    peak_pulse_charge_a: 250.0
+    peak_pulse_discharge_a: 400.0
+  thermal_limits:
+    min_charge_temp_c: 0.0
+    max_charge_temp_c: 45.0
+    min_discharge_temp_c: -25.0
+    max_discharge_temp_c: 60.0
+    thermal_warning_temp_c: 60.0
+    critical_thermal_runaway_temp_c: 80.0
+  balancing:
+    balancing_delta_v_threshold_mv: 10.0
+    balancing_enabled: true
+  metadata:
+    cooling_type: "liquid_glycol_cold_plate"
