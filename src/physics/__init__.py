@@ -1,4 +1,8 @@
-"""Physics-Based Electrochemical Modeling Package for TwinVolt."""
+"""Physics Modeling and Electrochemical Solver Package.
+
+Re-exports core physics interfaces and adapters from `src.models.physics`
+for top-level package accessibility.
+"""
 
 from src.models.physics.base import (
     AbstractPhysicsBackend,
@@ -29,4 +33,3 @@ __all__ = [
     "PyBaMMNativeBackend",
     "SimulatedPhysicsBackend",
 ]
-

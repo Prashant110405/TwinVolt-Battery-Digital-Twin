@@ -12,9 +12,9 @@ This specification defines the **Physics-Based Electrochemical Model Backend and
 High-fidelity partial differential equation (PDE) electrochemical solvers (such as the Doyle-Fuller-Newman model and Single Particle Model) are essential for deep internal state observation (e.g., solid-phase lithium concentration gradients, electrolyte depletion, and localized reaction overpotentials).
 
 TwinVolt achieves complete architectural decoupling by wrapping electrochemical solvers behind the universal `BatteryModel` protocol from Task 2.1:
-- **Solver Agnostic**: The Digital Twin runtime, telemetry stream, and observer layers interact with physics models through identical `initialize()`, `step()`, and `reset()` interfaces as Equivalent Circuit Models.
-- **Graceful Fallback**: In minimal or CI environments where full CasADi/C-compilers are not present, an analytical `SimulatedPhysicsBackend` provides sub-millisecond execution.
-- **Microscopic State Mapping**: Internal electrochemical states (surface concentrations $c_s$, reaction overpotentials $\eta_{rxn}$) are mapped to `ModelState.custom_states` without altering standard domain contracts.
+- **Solver Agnostic**: The Digital Twin runtime, telemetry stream, and observer layers interact with physics models through the model-agnostic `PhysicsModelAdapter` and identical `initialize()`, `step()`, and `reset()` interfaces as Equivalent Circuit Models.
+- **Graceful Fallback**: In minimal or CI environments where full CasADi/C-compilers are not present, an analytical `SimulatedPhysicsBackend` provides sub-millisecond deterministic execution.
+- **Microscopic State Mapping**: Internal electrochemical states (surface concentrations $c_s$, reaction overpotentials $\eta_{rxn}$, ohmic drops) are mapped to `ModelState.custom_states` without altering standard domain contracts.
 
 ```mermaid
 flowchart TD
@@ -24,23 +24,27 @@ flowchart TD
         OUT[ModelOutput: y k]
     end
 
-    subgraph Adapter [PyBaMMModelAdapter Layer]
-        BACKEND{PhysicsModelBackend}
-        NATIVE[PyBaMMNativeBackend DFN / SPM]
+    subgraph Adapter [PhysicsModelAdapter / PyBaMMModelAdapter Layer]
+        BACKEND{PhysicsModelBackend / AbstractPhysicsBackend}
+        NATIVE[PyBaMMNativeBackend DFN / SPMe / SPM]
         SIM[SimulatedPhysicsBackend SPM Surrogate]
+        CUSTOM[Custom User Electrochemical Solvers]
     end
 
     subgraph Solvers [Underlying Solvers]
         PYBAMM[PyBaMM / CasADi PDE Solver]
         ANALYTICAL[Analytical SPM Approximator]
+        THIRD_PARTY[Third-Party Electrochemical Engines]
     end
 
     INP --> PROTO
     PROTO --> BACKEND
     BACKEND -->|If PyBaMM Available| NATIVE --> PYBAMM
     BACKEND -->|Fallback / Fast CI| SIM --> ANALYTICAL
+    BACKEND -->|Custom Engines| CUSTOM --> THIRD_PARTY
     PYBAMM --> OUT
     ANALYTICAL --> OUT
+    THIRD_PARTY --> OUT
 ```
 
 ---

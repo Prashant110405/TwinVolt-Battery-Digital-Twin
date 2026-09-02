@@ -28,6 +28,9 @@ As TwinVolt progresses through its development lifecycle, all formal architectur
 - [Mathematical Core & Model Contracts Specification](specifications/mathematical-core.md) — State space vectors ($x[k], u[k], y[k]$), `BatteryModel` protocol, numerical ODE integrators, and physical invariant contracts.
 - [Electro-Thermal Model Specification](specifications/electro-thermal-model.md) — N-RC Equivalent Circuit Models (0-RC, 1-RC Thevenin, 2-RC Dual Polarization), 0D lumped thermal dynamics, and loss coupling.
 - [Physics-Based Model Backend & PyBaMM Adapter Specification](specifications/physics-model-adapter.md) — SPM, SPMe, DFN electrochemical model integration, parameter translation layer, and surrogate fallback.
+- [Time-Series Persistence & Storage Specification](specifications/storage-repository.md) — Protocols, query semantics, bounded circular buffers, and file append persistence.
+- [Internal Event Bus & Observability Specification](specifications/event-bus-and-observability.md) — In-process publish-subscribe broker, priority ordering, fault isolation, and execution metrics.
+- [Level 2 Battery Modeling & Estimation Gate Report](models-validation.md) — Formal Level 2 architecture gate review, universality test matrix, invariant audit, and sign-off.
 
 ---
 

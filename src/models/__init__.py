@@ -35,13 +35,36 @@ from src.models.ecm.parameters import (
     GenericECMParameters,
     RCBranchParameters,
 )
+from src.models.parameters.chemistry_defaults import (
+    ChemistryProfile,
+    get_chemistry_default_ocv_model,
+    get_chemistry_default_parameters,
+    get_chemistry_default_temperature_scaling,
+    get_chemistry_profile,
+    list_supported_default_chemistries,
+)
 from src.models.parameters.linear_ocv import LinearOCVModel
-from src.models.physics.base import PhysicsModelBackend
+from src.models.parameters.ocv_curve import OCVCurve
+from src.models.parameters.temperature_scaling import TemperatureScaling
+from src.models.physics.base import (
+    AbstractPhysicsBackend,
+    PhysicsModelBackend,
+    PhysicsStepResult,
+)
 from src.models.physics.parameters import PhysicsModelParameters
+from src.models.physics.physics_adapter import PhysicsModelAdapter
 from src.models.physics.pybamm_adapter import (
     PyBaMMModelAdapter,
     PyBaMMNativeBackend,
     SimulatedPhysicsBackend,
+)
+from src.models.aggregator.balancing_model import (
+    PassiveBalancingConfig,
+    PassiveBalancingModel,
+)
+from src.models.aggregator.pack_model import (
+    BatteryPackModel,
+    PackModelOutput,
 )
 from src.models.thermal.lumped import LumpedThermalModel
 from src.models.types import (
@@ -59,16 +82,31 @@ __all__ = [
     "OCVModel",
     "ThermalModel",
     "PhysicsModelBackend",
+    "AbstractPhysicsBackend",
+    "PhysicsStepResult",
     # Concrete Models & Components
     "GenericECMModel",
     "GenericECMParameters",
     "RCBranchParameters",
+    "BatteryPackModel",
+    "PackModelOutput",
+    "PassiveBalancingModel",
+    "PassiveBalancingConfig",
+    "PhysicsModelAdapter",
     "PyBaMMModelAdapter",
     "PhysicsModelParameters",
     "PyBaMMNativeBackend",
     "SimulatedPhysicsBackend",
     "LumpedThermalModel",
     "LinearOCVModel",
+    "OCVCurve",
+    "TemperatureScaling",
+    "ChemistryProfile",
+    "get_chemistry_profile",
+    "get_chemistry_default_parameters",
+    "get_chemistry_default_ocv_model",
+    "get_chemistry_default_temperature_scaling",
+    "list_supported_default_chemistries",
     # Types & State Space
     "ModelState",
     "ModelInput",
@@ -94,3 +132,4 @@ __all__ = [
     "NumericalInstabilityError",
     "UnphysicalStateError",
 ]
+

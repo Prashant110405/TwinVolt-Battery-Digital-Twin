@@ -9,8 +9,11 @@ from typing import Any, Optional, Protocol, runtime_checkable
 
 from src.models.exceptions import (
     InvalidModelInputError,
+    InvalidModelStateError,
     ModelEvaluationError,
     ModelInitializationError,
+    NumericalInstabilityError,
+    UnphysicalStateError,
 )
 from src.models.types import (
     ModelInput,
@@ -159,7 +162,16 @@ class AbstractBatteryModel(ABC):
                 self._state = output.state
             return output
         except Exception as exc:
-            if isinstance(exc, (InvalidModelInputError, ModelEvaluationError)):
+            if isinstance(
+                exc,
+                (
+                    InvalidModelInputError,
+                    InvalidModelStateError,
+                    ModelEvaluationError,
+                    NumericalInstabilityError,
+                    UnphysicalStateError,
+                ),
+            ):
                 raise
             raise ModelEvaluationError(
                 f"Model '{self._metadata.model_id}' evaluation failed: {exc}",
