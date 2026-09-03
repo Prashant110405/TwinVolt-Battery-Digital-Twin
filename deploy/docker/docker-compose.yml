@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  twinvolt-edge:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    container_name: twinvolt_edge_server
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - TWINVOLT_HOST=0.0.0.0
+      - TWINVOLT_PORT=8000
+      - TWINVOLT_LOG_LEVEL=INFO
+      - TWINVOLT_GATEWAY_AUTOSTART=false
+      - TWINVOLT_GATEWAY_QUEUE_SIZE=1000
+      - TWINVOLT_STORAGE_DIR=/app/data/storage
+    volumes:
+      - twinvolt_storage:/app/data/storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  twinvolt_storage:

@@ -1,1 +1,1 @@
-"""Level 1 Domain & Data Foundation Validation Test Suite."""
+"""Unit tests for Battery Behavior Validation, Residual Analysis, and Parameter Validation."""
