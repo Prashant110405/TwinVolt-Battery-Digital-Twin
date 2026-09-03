@@ -112,15 +112,30 @@ class TestDiagnosticExplanationBuilder(unittest.TestCase):
         narrative, actions = DiagnosticExplanationBuilder.build_narrative(
             lifecycle_state=FaultLifecycleState.DATA_QUALITY_FAILED,
             severity=DiagnosticSeverity.UNKNOWN,
+            context=OperatingContext.REST,
+            primary_hypothesis=None,
+            alternative_hypotheses=(),
+            corroborating_channels=(),
+            data_quality_status="FAILED",
+        )
+        self.assertIn("DATA QUALITY FAILURE", narrative)
+        self.assertIn("FAILED", narrative)
+        self.assertIn("Inspect telemetry ingestion pipeline", actions[0])
+
+    def test_data_gapped_explanation(self) -> None:
+        """DATA_GAPPED with INSUFFICIENT_EVIDENCE explains temporal gap evaluability limitation."""
+        narrative, actions = DiagnosticExplanationBuilder.build_narrative(
+            lifecycle_state=FaultLifecycleState.INSUFFICIENT_EVIDENCE,
+            severity=DiagnosticSeverity.UNKNOWN,
             context=OperatingContext.DATA_GAPPED,
             primary_hypothesis=None,
             alternative_hypotheses=(),
             corroborating_channels=(),
             data_quality_status="DATA_GAPPED",
         )
-        self.assertIn("DATA QUALITY FAILURE", narrative)
+        self.assertIn("INSUFFICIENT EVIDENCE", narrative)
         self.assertIn("DATA_GAPPED", narrative)
-        self.assertIn("Inspect telemetry ingestion pipeline", actions[0])
+        self.assertIn("Verify telemetry sampling frequency", actions[0])
 
     def test_insufficient_evidence_missing_signals_explanation(self) -> None:
         """INSUFFICIENT_EVIDENCE lists specific missing required signals."""

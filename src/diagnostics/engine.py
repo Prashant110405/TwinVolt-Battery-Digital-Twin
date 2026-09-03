@@ -4,6 +4,7 @@ Orchestrates multi-hypothesis evaluation, deterministic ranking, temporal deboun
 lifecycle state machine transitions, and explainable diagnostic assessments.
 """
 
+import math
 from typing import Any, Mapping, Optional, Sequence
 import uuid
 
@@ -32,6 +33,7 @@ from src.diagnostics.types import (
     OperatingContext,
     RootCauseHypothesis,
 )
+from src.telemetry.enums import TelemetryQuality
 from src.telemetry.snapshots import TelemetrySnapshot
 from src.validation.types import ModelValidationReport, ModelValidationState
 
@@ -62,6 +64,7 @@ class DiagnosticEngine:
         }
         self._lifecycle_tracker = DiagnosticLifecycleTracker()
         self._latest_assessment: Optional[DiagnosticAssessmentReport] = None
+        self._last_timestamp_ns: Optional[int] = None
 
     @property
     def system_id(self) -> str:
@@ -82,6 +85,37 @@ class DiagnosticEngine:
     def lifecycle_tracker(self) -> DiagnosticLifecycleTracker:
         """Attached lifecycle state tracker."""
         return self._lifecycle_tracker
+
+    @staticmethod
+    def is_model_validation_critical_eligible(
+        val_state: Optional[Any],
+        category: Optional[DiagnosticCategory] = None,
+    ) -> bool:
+        """Determines whether upstream model validation permits critical advisory escalation.
+
+        Semantics:
+        - VALID / VALIDATED (or None / nominal steady-state) -> eligible for critical advisory
+        - DEGRADED -> NOT eligible for critical physical-battery hazard/advisory (ELECTRICAL, THERMAL, CELL)
+        - INSUFFICIENT_DATA -> NOT eligible
+        - DATA_QUALITY_FAILED -> NOT eligible
+        - UNAVAILABLE -> NOT eligible
+        """
+        if val_state is None:
+            return True
+
+        val_str = val_state.value if isinstance(val_state, ModelValidationState) else str(val_state)
+        if val_str in ("VALID", "VALIDATED", "VALIDATING", "EXCITATION_STEADY_STATE_ONLY"):
+            return True
+
+        if val_str == "DEGRADED":
+            # DEGRADED may reduce model fidelity, but it must never be sufficient to produce
+            # a DIAGNOSED_CRITICAL physical battery hazard/advisory (ELECTRICAL, THERMAL, CELL).
+            return False
+
+        if val_str in ("INSUFFICIENT_DATA", "DATA_QUALITY_FAILED", "UNAVAILABLE"):
+            return False
+
+        return False
 
     def step(
         self,
@@ -107,17 +141,73 @@ class DiagnosticEngine:
         ts_ns = telemetry.timestamp_ns
         assessment_id = f"diag_{self._system_id}_{ts_ns}_{uuid.uuid4().hex[:8]}"
 
-        # 1. Classify Operating Context
+        # 1. Input Data Quality Pre-check (NaN, Inf, TelemetryQuality.INVALID, retrograde timestamps)
+        is_data_corrupted = False
+        corrupted_reason = ""
+
+        if telemetry.quality == TelemetryQuality.INVALID:
+            is_data_corrupted = True
+            corrupted_reason = "Telemetry marked INVALID by ingestion layer."
+        elif self._last_timestamp_ns is not None and ts_ns < self._last_timestamp_ns:
+            is_data_corrupted = True
+            corrupted_reason = f"Retrograde timestamp detected: {ts_ns} < {self._last_timestamp_ns}."
+        else:
+            # Check numerical sanity for float non-finiteness (NaN / Inf)
+            for field_name in ("pack_voltage_v", "pack_current_a", "avg_cell_temperature_c"):
+                val = getattr(telemetry, field_name, None)
+                if val is not None and (math.isnan(val) or math.isinf(val)):
+                    is_data_corrupted = True
+                    corrupted_reason = f"Non-finite value in telemetry signal {field_name}: {val}."
+                    break
+
+        if is_data_corrupted:
+            self._last_timestamp_ns = ts_ns
+            data_quality_status = "FAILED"
+            new_state = self._lifecycle_tracker.transition_to(
+                new_state=FaultLifecycleState.DATA_QUALITY_FAILED,
+                timestamp_ns=ts_ns,
+                reason=corrupted_reason,
+            )
+            narrative, actions = DiagnosticExplanationBuilder.build_narrative(
+                lifecycle_state=new_state,
+                severity=DiagnosticSeverity.UNKNOWN,
+                context=OperatingContext.REST,
+                primary_hypothesis=None,
+                alternative_hypotheses=(),
+                corroborating_channels=(),
+                data_quality_status=data_quality_status,
+                missing_required_signals=(),
+            )
+            report = DiagnosticAssessmentReport(
+                assessment_id=assessment_id,
+                system_id=self._system_id,
+                timestamp_ns=ts_ns,
+                lifecycle_state=new_state,
+                severity=DiagnosticSeverity.UNKNOWN,
+                operating_context=OperatingContext.REST,
+                primary_hypothesis=None,
+                alternative_hypotheses=(),
+                explanation_narrative=narrative,
+                recommended_operator_actions=actions,
+                diagnostics={
+                    "data_quality_status": data_quality_status,
+                    "reason": corrupted_reason,
+                },
+                active_anomalies_count=0,
+                data_quality_status=data_quality_status,
+            )
+            self._latest_assessment = report
+            return report
+
+        # 2. Operating Context Classification & Temporal Gap Handling
         context = self._context_classifier.classify(telemetry, dt_s=dt_s)
 
-        # 2. Check Data Quality
-        data_quality_status = "VALID"
         if context == OperatingContext.DATA_GAPPED:
             data_quality_status = "DATA_GAPPED"
             new_state = self._lifecycle_tracker.transition_to(
-                new_state=FaultLifecycleState.DATA_QUALITY_FAILED,
-                reason="Telemetry data gap exceeded allowable threshold",
+                new_state=FaultLifecycleState.INSUFFICIENT_EVIDENCE,
                 timestamp_ns=ts_ns,
+                reason="Telemetry gap exceeds configured threshold; temporal continuity and rate-of-change evidence cannot be evaluated.",
             )
             narrative, actions = DiagnosticExplanationBuilder.build_narrative(
                 lifecycle_state=new_state,
@@ -127,6 +217,7 @@ class DiagnosticEngine:
                 alternative_hypotheses=(),
                 corroborating_channels=(),
                 data_quality_status=data_quality_status,
+                missing_required_signals=(),
             )
             report = DiagnosticAssessmentReport(
                 assessment_id=assessment_id,
@@ -139,11 +230,17 @@ class DiagnosticEngine:
                 alternative_hypotheses=(),
                 explanation_narrative=narrative,
                 recommended_operator_actions=actions,
+                diagnostics={
+                    "data_quality_status": data_quality_status,
+                    "reason": "Data continuity gap detected.",
+                },
                 active_anomalies_count=0,
                 data_quality_status=data_quality_status,
             )
             self._latest_assessment = report
             return report
+
+        data_quality_status = "VALID"
 
         # 3. Model Validation Gating Influence
         val_state = (
@@ -152,10 +249,6 @@ class DiagnosticEngine:
             else None
         )
         val_state_name = val_state.value if val_state is not None else "UNKNOWN"
-        is_model_val_failed = val_state in (
-            ModelValidationState.DATA_QUALITY_FAILED,
-            ModelValidationState.INSUFFICIENT_DATA,
-        )
 
         # 4. Evaluate Hypotheses and Update Temporal Trackers
         evaluated_hypotheses: list[RootCauseHypothesis] = []
@@ -189,20 +282,22 @@ class DiagnosticEngine:
             )
 
         # 5. Deterministic Hypothesis Ranking
-        # Priority:
-        # 1. Full required coverage (1.0 vs <1.0)
-        # 2. Evidence score (descending)
-        # 3. Persisted status (True vs False)
-        # 4. Corroborating channels count (descending)
-        # 5. Hypothesis ID tie-breaker
-        def ranking_key(h: RootCauseHypothesis) -> tuple[int, float, int, int, str]:
-            cov_int = 1 if h.required_signal_coverage == 1.0 else 0
-            persisted_int = 1 if self._trackers[h.hypothesis_id].get_state().is_persisted else 0
+        def ranking_key(h: RootCauseHypothesis) -> tuple[int, float, float, int, int, str]:
+            eligible_int = 1 if h.is_diagnostically_eligible else 0
+            cov_val = float(h.required_signal_coverage)
+            score_val = float(h.evidence_score)
             channels_count = len(corroborating_map.get(h.hypothesis_id, ()))
-            # Negative ID string to invert descending sort order for tie-breaker
-            return (cov_int, h.evidence_score, persisted_int, channels_count, h.hypothesis_id)
+            persisted_int = 1 if self._trackers[h.hypothesis_id].get_state().is_persisted else 0
+            return (
+                -eligible_int,
+                -cov_val,
+                -score_val,
+                -channels_count,
+                -persisted_int,
+                h.hypothesis_id,
+            )
 
-        ranked_hypotheses = sorted(evaluated_hypotheses, key=ranking_key, reverse=True)
+        ranked_hypotheses = sorted(evaluated_hypotheses, key=ranking_key)
 
         # Leading hypothesis
         leading_candidate = ranked_hypotheses[0] if ranked_hypotheses else None
@@ -221,6 +316,13 @@ class DiagnosticEngine:
         )
 
         # 6. Critical Advisory Criteria Evaluation (ALL 7 mandatory conditions)
+        # 1. Required evidence coverage == 1.0
+        # 2. Evidence strength >= configured critical threshold
+        # 3. No active contraindicating evidence
+        # 4. At least configured minimum independent corroborating channels
+        # 5. Model validation state is critical-advisory eligible (VALID/VALIDATED, not DEGRADED/INSUFFICIENT_DATA/DATA_QUALITY_FAILED)
+        # 6. Temporal persistence has been satisfied
+        # 7. Hypothesis/category is critical-advisory eligible
         is_critical_eligible = False
         critical_reasons: list[str] = []
 
@@ -230,10 +332,20 @@ class DiagnosticEngine:
             c2_score = primary_hypothesis.evidence_score >= self._config.critical_evidence_score_threshold
             c3_contra = len(primary_hypothesis.contraindicating_evidence) == 0
             c4_channels = len(leading_channels) >= self._config.critical_min_corroborating_channels
-            c5_val = not is_model_val_failed
+            c5_val = self.is_model_validation_critical_eligible(
+                val_state=val_state,
+                category=primary_hypothesis.category,
+            )
             c6_persist = leading_tracker_state.is_persisted
+            c7_hyp_eligible = (
+                primary_hypothesis.is_critical_eligible
+                and (
+                    primary_hypothesis.category in self._config.critical_eligible_categories
+                    or primary_hypothesis.hypothesis_id in self._config.critical_eligible_hypothesis_ids
+                )
+            )
 
-            if c1_cov and c2_score and c3_contra and c4_channels and c5_val and c6_persist:
+            if c1_cov and c2_score and c3_contra and c4_channels and c5_val and c6_persist and c7_hyp_eligible:
                 is_critical_eligible = True
             else:
                 if not c1_cov:
@@ -245,9 +357,11 @@ class DiagnosticEngine:
                 if not c4_channels:
                     critical_reasons.append(f"Corroborating channels ({len(leading_channels)}) < {self._config.critical_min_corroborating_channels}")
                 if not c5_val:
-                    critical_reasons.append("Upstream model validation state failed or insufficient")
+                    critical_reasons.append(f"Upstream model validation state '{val_state_name}' is ineligible for critical advisory escalation")
                 if not c6_persist:
                     critical_reasons.append("Persistence debounce threshold not yet reached")
+                if not c7_hyp_eligible:
+                    critical_reasons.append(f"Hypothesis {primary_hypothesis.hypothesis_id} or category {primary_hypothesis.category.value} is not critical-advisory eligible")
 
         # 7. Drive Lifecycle State Transitions
         if primary_hypothesis is None:
@@ -369,3 +483,4 @@ class DiagnosticEngine:
             tracker.reset()
         self._lifecycle_tracker.reset()
         self._latest_assessment = None
+        self._last_timestamp_ns = None

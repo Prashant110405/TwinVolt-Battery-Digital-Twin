@@ -196,6 +196,30 @@ class TestDiagnosticHypotheses(unittest.TestCase):
 
         self.assertEqual(res1.to_dict(), res2.to_dict())
 
+    def test_hypothesis_critical_eligibility_flags(self) -> None:
+        """Standard hypotheses explicitly define their critical advisory eligibility."""
+        h_sensor = SensorDriftHypothesis()
+        h_model = ModelFidelityMismatchHypothesis()
+        h_ohmic = ApparentOhmicResistanceGrowthHypothesis()
+        h_thermal = ThermalDissipationImpairmentHypothesis()
+        h_cell = CellDispersionImbalanceHypothesis()
+        h_fade = ThroughputAcceleratedFadeHypothesis()
+
+        self.assertFalse(h_sensor.is_critical_eligible)
+        self.assertFalse(h_model.is_critical_eligible)
+        self.assertTrue(h_ohmic.is_critical_eligible)
+        self.assertTrue(h_thermal.is_critical_eligible)
+        self.assertTrue(h_cell.is_critical_eligible)
+        self.assertFalse(h_fade.is_critical_eligible)
+
+    def test_hypothesis_eligibility_propagation_to_result(self) -> None:
+        """Evaluated RootCauseHypothesis contains is_critical_eligible and is_diagnostically_eligible flags."""
+        hyp = ThermalDissipationImpairmentHypothesis()
+        res = hyp.evaluate([], context=OperatingContext.REST)
+        self.assertTrue(res.is_critical_eligible)
+        self.assertTrue(res.is_diagnostically_eligible)
+        self.assertEqual(res.evidence_strength_tier, res.confidence_level)
+
 
 if __name__ == "__main__":
     unittest.main()

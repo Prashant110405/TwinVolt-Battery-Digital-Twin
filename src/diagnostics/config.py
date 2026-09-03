@@ -8,6 +8,8 @@ from dataclasses import dataclass
 import math
 from typing import Any, Mapping
 
+from src.diagnostics.types import DiagnosticCategory
+
 
 @dataclass(frozen=True)
 class DiagnosticThresholdConfig:
@@ -27,7 +29,7 @@ class DiagnosticThresholdConfig:
     # Persistence & Debounce Limits
     persistence_debounce_steps: int = 5               # Steps required to transition ANOMALY_DETECTED -> SUSPECTED
     recovery_hysteresis_steps: int = 10               # Nominal steps required to transition to RECOVERED
-    min_evidence_coverage_fraction: float = 0.50      # Minimum optional coverage required for MODERATE/STRONG confidence
+    min_evidence_coverage_fraction: float = 0.50      # Minimum optional coverage required for MODERATE/STRONG evidence tier
 
     # Voltage & Resistance Analytical Criteria (Engineering Defaults)
     voltage_warning_residual_v: float = 0.030         # 30 mV analytical warning threshold [V]
@@ -43,9 +45,19 @@ class DiagnosticThresholdConfig:
     cell_voltage_imbalance_spread_v: float = 0.050    # 50 mV cell voltage spread during rest/charge [V]
 
     # Critical Advisory Analytical Criteria (Engineering Defaults)
-    critical_evidence_score_threshold: float = 0.75   # Minimum evidence score required for DIAGNOSED_CRITICAL advisory [0.0, 1.0]
+    critical_evidence_score_threshold: float = 0.75   # Minimum empirical evidence score required for DIAGNOSED_CRITICAL advisory [0.0, 1.0]
     critical_min_corroborating_channels: int = 2      # Minimum distinct corroborating signal channels required
-    diagnosis_evidence_score_threshold: float = 0.50  # Minimum evidence score required for DIAGNOSED state [0.0, 1.0]
+    diagnosis_evidence_score_threshold: float = 0.50  # Minimum empirical evidence score required for DIAGNOSED state [0.0, 1.0]
+    critical_eligible_categories: tuple[DiagnosticCategory, ...] = (
+        DiagnosticCategory.THERMAL,
+        DiagnosticCategory.ELECTRICAL,
+        DiagnosticCategory.CELL,
+    )
+    critical_eligible_hypothesis_ids: tuple[str, ...] = (
+        "HYP_THERMAL_IMPAIRMENT",
+        "HYP_APPARENT_OHMIC_GROWTH",
+        "HYP_CELL_IMBALANCE",
+    )
 
     # Degradation Analytical Criteria
     soh_fade_discrepancy_fraction: float = 0.05       # 5% discrepancy between capacity SOH and cycling model
@@ -148,5 +160,7 @@ class DiagnosticThresholdConfig:
             "critical_evidence_score_threshold": self.critical_evidence_score_threshold,
             "critical_min_corroborating_channels": self.critical_min_corroborating_channels,
             "diagnosis_evidence_score_threshold": self.diagnosis_evidence_score_threshold,
+            "critical_eligible_categories": [c.value for c in self.critical_eligible_categories],
+            "critical_eligible_hypothesis_ids": list(self.critical_eligible_hypothesis_ids),
             "soh_fade_discrepancy_fraction": self.soh_fade_discrepancy_fraction,
         }

@@ -101,15 +101,18 @@ class DiagnosticEvidenceItem:
 
 @dataclass(frozen=True)
 class RootCauseHypothesis:
-    """Candidate root-cause hypothesis with evidence breakdown and confidence rating."""
+    """Candidate root-cause hypothesis with empirical evidence breakdown and evidence strength rating."""
 
-    hypothesis_id: str                               # e.g., "HYP_APPARENT_OHMIC_RESISTANCE_GROWTH"
+    hypothesis_id: str                               # e.g., "HYP_APPARENT_OHMIC_GROWTH"
     title: str                                       # Human-readable title
     category: DiagnosticCategory                     # Orthogonal category (SENSOR, MODEL, ELECTRICAL, etc.)
     evidence_score: float                            # Deterministic empirical score [0.0, 1.0]
-    confidence_level: str                            # "STRONG", "MODERATE", "WEAK", "REJECTED", "INSUFFICIENT_DATA"
+    confidence_level: str                            # Non-probabilistic evidence tier: "STRONG", "MODERATE", "WEAK", "REJECTED", "INSUFFICIENT_DATA", "NO_EVIDENCE"
     required_signal_coverage: float                  # Fraction of required signals available [0.0, 1.0]
     optional_signal_coverage: float                  # Fraction of optional signals available [0.0, 1.0]
+    is_diagnostically_eligible: bool = True          # True if eligible for diagnostic evaluation in active regime/configuration
+    is_critical_eligible: bool = False               # Explicit capability flag: True if hypothesis is critical-advisory eligible
+    evidence_strength_tier: str = "NO_EVIDENCE"      # Non-probabilistic qualitative tier ("STRONG", "MODERATE", "WEAK", "REJECTED", "INSUFFICIENT_DATA", "NO_EVIDENCE")
     supporting_evidence: tuple[DiagnosticEvidenceItem, ...] = field(default_factory=tuple)
     contraindicating_evidence: tuple[DiagnosticEvidenceItem, ...] = field(default_factory=tuple)
     untestable_confounds: tuple[str, ...] = field(default_factory=tuple)
@@ -127,6 +130,9 @@ class RootCauseHypothesis:
         if not isinstance(self.optional_signal_coverage, (int, float)) or not (0.0 <= self.optional_signal_coverage <= 1.0):
             raise ValueError(f"optional_signal_coverage must be in range [0.0, 1.0], got {self.optional_signal_coverage}.")
 
+        if self.evidence_strength_tier == "NO_EVIDENCE" and self.confidence_level != "NO_EVIDENCE":
+            object.__setattr__(self, "evidence_strength_tier", self.confidence_level)
+
     def to_dict(self) -> dict[str, Any]:
         """Serializes root-cause hypothesis to dictionary."""
         return {
@@ -135,6 +141,9 @@ class RootCauseHypothesis:
             "category": self.category.value,
             "evidence_score": round(self.evidence_score, 4),
             "confidence_level": self.confidence_level,
+            "evidence_strength_tier": self.evidence_strength_tier or self.confidence_level,
+            "is_diagnostically_eligible": self.is_diagnostically_eligible,
+            "is_critical_eligible": self.is_critical_eligible,
             "required_signal_coverage": round(self.required_signal_coverage, 4),
             "optional_signal_coverage": round(self.optional_signal_coverage, 4),
             "supporting_evidence": [e.to_dict() for e in self.supporting_evidence],

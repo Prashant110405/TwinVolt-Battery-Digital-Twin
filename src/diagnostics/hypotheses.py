@@ -32,6 +32,7 @@ class AbstractDiagnosticHypothesis(ABC):
         untestable_confounds: Sequence[str],
         suggested_investigations: Sequence[str],
         total_possible_supporting_weight: float = 1.0,
+        is_critical_eligible: bool = False,
     ) -> None:
         if not hypothesis_id or not isinstance(hypothesis_id, str):
             raise ValueError("hypothesis_id must be a non-empty string.")
@@ -50,6 +51,7 @@ class AbstractDiagnosticHypothesis(ABC):
         self._untestable_confounds = tuple(untestable_confounds)
         self._suggested_investigations = tuple(suggested_investigations)
         self._total_possible_supporting_weight = float(total_possible_supporting_weight)
+        self._is_critical_eligible = bool(is_critical_eligible)
 
     @property
     def hypothesis_id(self) -> str:
@@ -91,6 +93,23 @@ class AbstractDiagnosticHypothesis(ABC):
         """Configured maximum possible supporting weight."""
         return self._total_possible_supporting_weight
 
+    @property
+    def is_critical_eligible(self) -> bool:
+        """True if this hypothesis is eligible for DIAGNOSED_CRITICAL advisory classification."""
+        return self._is_critical_eligible
+
+    def is_diagnostically_eligible(
+        self,
+        context: OperatingContext,
+        telemetry: Optional[Any] = None,
+    ) -> bool:
+        """Determines if this hypothesis is diagnostically eligible in the active context/regime.
+
+        Subclasses may override if specific operational regimes or hardware instrumentation
+        render the hypothesis temporarily or permanently ineligible for diagnostic ranking.
+        """
+        return True
+
     def evaluate(
         self,
         evidence_items: Sequence[DiagnosticEvidenceItem],
@@ -117,14 +136,19 @@ class AbstractDiagnosticHypothesis(ABC):
             config=cfg,
         )
 
+        eligible = self.is_diagnostically_eligible(context=context)
+
         return RootCauseHypothesis(
             hypothesis_id=self._hypothesis_id,
             title=self._title,
             category=self._category,
             evidence_score=score_result.evidence_score,
             confidence_level=score_result.confidence_level,
+            evidence_strength_tier=score_result.confidence_level,
             required_signal_coverage=score_result.required_signal_coverage,
             optional_signal_coverage=score_result.optional_signal_coverage,
+            is_diagnostically_eligible=eligible,
+            is_critical_eligible=self._is_critical_eligible,
             supporting_evidence=score_result.supporting_evidence,
             contraindicating_evidence=score_result.contraindicating_evidence,
             untestable_confounds=self._untestable_confounds,
@@ -155,6 +179,7 @@ class SensorDriftHypothesis(AbstractDiagnosticHypothesis):
                 "Verify analog-to-digital converter (ADC) reference rail stability on BMS sensing board.",
             ),
             total_possible_supporting_weight=1.0,
+            is_critical_eligible=False,
         )
 
 
@@ -177,6 +202,7 @@ class ModelFidelityMismatchHypothesis(AbstractDiagnosticHypothesis):
                 "Perform scheduled laboratory benchmark recalibration if persistent model divergence is observed.",
             ),
             total_possible_supporting_weight=1.0,
+            is_critical_eligible=False,
         )
 
 
@@ -199,6 +225,7 @@ class ApparentOhmicResistanceGrowthHypothesis(AbstractDiagnosticHypothesis):
                 "Review Level 5.2 RLS parameter covariance and Level 5.3 prospective validation evidence.",
             ),
             total_possible_supporting_weight=1.0,
+            is_critical_eligible=True,
         )
 
 
@@ -221,6 +248,7 @@ class ThermalDissipationImpairmentHypothesis(AbstractDiagnosticHypothesis):
                 "Verify ambient temperature sensor continuity and cooling fluid circulation rate.",
             ),
             total_possible_supporting_weight=1.0,
+            is_critical_eligible=True,
         )
 
 
@@ -243,6 +271,7 @@ class CellDispersionImbalanceHypothesis(AbstractDiagnosticHypothesis):
                 "Perform low-rate constant-current conditioning cycle to equalize cell state of charge.",
             ),
             total_possible_supporting_weight=1.0,
+            is_critical_eligible=True,
         )
 
 
@@ -265,6 +294,7 @@ class ThroughputAcceleratedFadeHypothesis(AbstractDiagnosticHypothesis):
                 "Review historical operating temperature profiles and cumulative high-rate cycling exposure.",
             ),
             total_possible_supporting_weight=1.0,
+            is_critical_eligible=False,
         )
 
 

@@ -61,21 +61,28 @@ class DiagnosticExplanationBuilder:
             lines.append("\n[DATA QUALITY FAILURE]")
             lines.append(
                 f"Diagnostic evaluation is suspended due to data quality state '{data_quality_status}'. "
-                "Telemetry stream contains gaps, retrograde timestamps, or invalid sensor flags."
+                "Telemetry stream contains invalid sensor flags, non-finite values (NaN/Inf), or corrupted readings."
             )
             actions.append("Inspect telemetry ingestion pipeline, communication bus integrity, and sensor power rails.")
             return "\n".join(lines), tuple(actions)
 
         if lifecycle_state == FaultLifecycleState.INSUFFICIENT_EVIDENCE:
             lines.append("\n[INSUFFICIENT EVIDENCE]")
-            if missing_required_signals:
+            if context == OperatingContext.DATA_GAPPED:
+                lines.append(
+                    "Telemetry observations are valid, but the time interval exceeds the configured data gap threshold (DATA_GAPPED). "
+                    "Rate-of-change and temporal continuity evidence cannot be evaluated reliably across this interval."
+                )
+                actions.append("Verify telemetry sampling frequency and check communication link stability.")
+            elif missing_required_signals:
                 lines.append(
                     f"Required telemetry signals are unavailable for full evaluation: {', '.join(missing_required_signals)}. "
                     "Diagnostic engine cannot evaluate hypothesis rules without required instrumentation."
                 )
+                actions.append("Verify sensor channel configuration and ensure required physical measurements are instrumented.")
             else:
                 lines.append("Telemetry is valid, but empirical evidence coverage is insufficient for reliable hypothesis evaluation.")
-            actions.append("Verify sensor channel configuration and ensure required physical measurements are instrumented.")
+                actions.append("Verify sensor channel configuration and ensure required physical measurements are instrumented.")
             return "\n".join(lines), tuple(actions)
 
         if lifecycle_state == FaultLifecycleState.NORMAL:
@@ -88,9 +95,10 @@ class DiagnosticExplanationBuilder:
             lines.append(f"\n[PRIMARY HYPOTHESIS: {primary_hypothesis.hypothesis_id}]")
             lines.append(f"Title: {primary_hypothesis.title}")
             lines.append(f"Category: {primary_hypothesis.category.value}")
+            tier_name = getattr(primary_hypothesis, "evidence_strength_tier", primary_hypothesis.confidence_level)
             lines.append(
-                f"Evidence Score: {primary_hypothesis.evidence_score:.4f} "
-                f"({primary_hypothesis.confidence_level} empirical evidence strength under configured analytical rules)"
+                f"Empirical Evidence Score: {primary_hypothesis.evidence_score:.4f} "
+                f"[{tier_name} empirical evidence strength under configured analytical rules]"
             )
             lines.append(f"Required Signal Coverage: {primary_hypothesis.required_signal_coverage * 100:.1f}%")
             lines.append(f"Optional Signal Coverage: {primary_hypothesis.optional_signal_coverage * 100:.1f}%")
@@ -132,9 +140,10 @@ class DiagnosticExplanationBuilder:
         if plausible_alternatives:
             lines.append("\n[COMPETING ALTERNATIVE HYPOTHESES]")
             for alt in plausible_alternatives:
+                alt_tier = getattr(alt, "evidence_strength_tier", alt.confidence_level)
                 lines.append(
                     f" - {alt.hypothesis_id} ({alt.category.value}): evidence_score={alt.evidence_score:.4f} "
-                    f"[{alt.confidence_level}]. Observed evidence is compatible with multiple candidate explanations."
+                    f"[{alt_tier}]. Observed evidence is compatible with multiple candidate explanations."
                 )
 
         # 5. Critical Advisory Safety Notice
