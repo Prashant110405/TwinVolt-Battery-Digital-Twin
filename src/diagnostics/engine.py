@@ -93,12 +93,20 @@ class DiagnosticEngine:
     ) -> bool:
         """Determines whether upstream model validation permits critical advisory escalation.
 
-        Semantics:
-        - VALID / VALIDATED (or None / nominal steady-state) -> eligible for critical advisory
-        - DEGRADED -> NOT eligible for critical physical-battery hazard/advisory (ELECTRICAL, THERMAL, CELL)
-        - INSUFFICIENT_DATA -> NOT eligible
-        - DATA_QUALITY_FAILED -> NOT eligible
-        - UNAVAILABLE -> NOT eligible
+        Model Validation — Critical Advisory Semantics:
+        1. ModelValidationState.VALID / VALIDATED:
+           - Physical hypotheses may reach DIAGNOSED.
+           - Critical-eligible physical hypotheses may reach DIAGNOSED_CRITICAL when all seven critical gates pass.
+        2. ModelValidationState.DEGRADED:
+           - Physical hypotheses remain evaluable and may reach ordinary DIAGNOSED when criteria are met.
+           - DEGRADED must NOT permit DIAGNOSED_CRITICAL for physical battery hazard categories:
+             ELECTRICAL, THERMAL, CELL.
+           - DEGRADED must NOT automatically create MODEL_MISMATCH.
+           - DEGRADED is an evidentiary/model-fidelity limitation, not proof of a physical fault.
+        3. ModelValidationState.INSUFFICIENT_DATA:
+           - Must NOT permit DIAGNOSED_CRITICAL.
+        4. ModelValidationState.DATA_QUALITY_FAILED:
+           - Must NOT permit DIAGNOSED_CRITICAL.
         """
         if val_state is None:
             return True
@@ -108,8 +116,14 @@ class DiagnosticEngine:
             return True
 
         if val_str == "DEGRADED":
-            # DEGRADED may reduce model fidelity, but it must never be sufficient to produce
-            # a DIAGNOSED_CRITICAL physical battery hazard/advisory (ELECTRICAL, THERMAL, CELL).
+            # DEGRADED is an evidentiary limitation, not proof of a physical fault.
+            # It strictly blocks DIAGNOSED_CRITICAL for physical battery hazard categories (ELECTRICAL, THERMAL, CELL).
+            if category is None or category in (
+                DiagnosticCategory.ELECTRICAL,
+                DiagnosticCategory.THERMAL,
+                DiagnosticCategory.CELL,
+            ):
+                return False
             return False
 
         if val_str in ("INSUFFICIENT_DATA", "DATA_QUALITY_FAILED", "UNAVAILABLE"):

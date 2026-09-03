@@ -822,6 +822,35 @@ class TestDiagnosticEngine(unittest.TestCase):
         self.assertIsInstance(res.confidence_level, str)
         self.assertEqual(res.confidence_level, res.evidence_strength_tier)
 
+    def test_is_model_validation_critical_eligible_explicit_mapping(self) -> None:
+        """Explicitly tests DiagnosticEngine.is_model_validation_critical_eligible across all states and categories."""
+        # 1. VALID / VALIDATED / VALIDATING / None -> True
+        self.assertTrue(DiagnosticEngine.is_model_validation_critical_eligible(None))
+        self.assertTrue(DiagnosticEngine.is_model_validation_critical_eligible(ModelValidationState.VALIDATED, DiagnosticCategory.ELECTRICAL))
+        self.assertTrue(DiagnosticEngine.is_model_validation_critical_eligible(ModelValidationState.VALIDATED, DiagnosticCategory.THERMAL))
+        self.assertTrue(DiagnosticEngine.is_model_validation_critical_eligible(ModelValidationState.VALIDATED, DiagnosticCategory.CELL))
+        self.assertTrue(DiagnosticEngine.is_model_validation_critical_eligible(ModelValidationState.VALIDATING))
+        self.assertTrue(DiagnosticEngine.is_model_validation_critical_eligible("EXCITATION_STEADY_STATE_ONLY"))
+
+        # 2. DEGRADED -> strictly False for physical hazard categories (ELECTRICAL, THERMAL, CELL) and None
+        self.assertFalse(DiagnosticEngine.is_model_validation_critical_eligible(ModelValidationState.DEGRADED, DiagnosticCategory.ELECTRICAL))
+        self.assertFalse(DiagnosticEngine.is_model_validation_critical_eligible(ModelValidationState.DEGRADED, DiagnosticCategory.THERMAL))
+        self.assertFalse(DiagnosticEngine.is_model_validation_critical_eligible(ModelValidationState.DEGRADED, DiagnosticCategory.CELL))
+        self.assertFalse(DiagnosticEngine.is_model_validation_critical_eligible(ModelValidationState.DEGRADED, None))
+        self.assertFalse(DiagnosticEngine.is_model_validation_critical_eligible("DEGRADED"))
+
+        # 3. INSUFFICIENT_DATA -> False
+        self.assertFalse(DiagnosticEngine.is_model_validation_critical_eligible(ModelValidationState.INSUFFICIENT_DATA))
+        self.assertFalse(DiagnosticEngine.is_model_validation_critical_eligible(ModelValidationState.INSUFFICIENT_DATA, DiagnosticCategory.THERMAL))
+
+        # 4. DATA_QUALITY_FAILED -> False
+        self.assertFalse(DiagnosticEngine.is_model_validation_critical_eligible(ModelValidationState.DATA_QUALITY_FAILED))
+        self.assertFalse(DiagnosticEngine.is_model_validation_critical_eligible(ModelValidationState.DATA_QUALITY_FAILED, DiagnosticCategory.ELECTRICAL))
+
+        # 5. UNAVAILABLE or unknown states -> False
+        self.assertFalse(DiagnosticEngine.is_model_validation_critical_eligible("UNAVAILABLE"))
+        self.assertFalse(DiagnosticEngine.is_model_validation_critical_eligible("UNKNOWN_STATE"))
+
     def test_reset_clears_all_engine_state(self) -> None:
         """Reset clears all hypothesis persistence trackers, lifecycle state, and cached assessments."""
         engine = DiagnosticEngine(system_id="twin_01")
@@ -836,3 +865,4 @@ class TestDiagnosticEngine(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
