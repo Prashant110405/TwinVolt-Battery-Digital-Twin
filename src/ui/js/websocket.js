@@ -37,14 +37,17 @@ class WebSocketClient {
 
     try {
       this.ws = new WebSocket(wsUrl);
+      const socket = this.ws;
 
-      this.ws.onopen = () => {
+      socket.onopen = () => {
+        if (this.ws !== socket) return;
         this.reconnectAttempts = 0;
         store.setWsStatus('CONNECTED');
         this._startHeartbeat();
       };
 
-      this.ws.onmessage = (evt) => {
+      socket.onmessage = (evt) => {
+        if (this.ws !== socket) return;
         try {
           const msg = JSON.parse(evt.data);
           this._handleMessage(msg);
@@ -53,7 +56,9 @@ class WebSocketClient {
         }
       };
 
-      this.ws.onclose = () => {
+      socket.onclose = () => {
+        if (this.ws !== socket) return;
+        this.ws = null;
         this._stopHeartbeat();
         store.setWsStatus('DISCONNECTED');
         if (!this.isExplicitDisconnect) {
@@ -61,7 +66,8 @@ class WebSocketClient {
         }
       };
 
-      this.ws.onerror = (err) => {
+      socket.onerror = (err) => {
+        if (this.ws !== socket) return;
         console.warn('[WS] Error:', err);
       };
     } catch (err) {
@@ -121,6 +127,7 @@ class WebSocketClient {
         break;
 
       case 'telemetry_ack':
+        store.notifyTelemetryAck(msg);
         break;
 
       case 'twin_state':

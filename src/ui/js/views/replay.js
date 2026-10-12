@@ -5,6 +5,7 @@
 
 import { api } from '../api.js';
 import { store } from '../state.js';
+import { escapeHTML } from '../html.js';
 
 export class ReplayView {
   constructor(container) {
@@ -203,7 +204,7 @@ export class ReplayView {
         for (const [name, sig] of Object.entries(res.signals)) {
           rowsHtml += `
             <tr>
-              <td class="cell-mono">${sig.signal_name}</td>
+              <td class="cell-mono">${escapeHTML(sig.signal_name)}</td>
               <td class="cell-mono">${sig.sample_count}</td>
               <td class="cell-mono">${sig.rmse.toFixed(4)}</td>
               <td class="cell-mono">${sig.mae.toFixed(4)}</td>

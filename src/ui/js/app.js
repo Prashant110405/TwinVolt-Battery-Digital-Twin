@@ -7,6 +7,7 @@ import { api } from './api.js';
 import { store } from './state.js';
 import { BenchmarkingView } from './views/benchmarking.js';
 import { DiagnosticsView } from './views/diagnostics.js';
+import { DatasetLabView } from './views/dataset_lab.js';
 import { EstimationView } from './views/estimation.js';
 import { EventsView } from './views/events.js';
 import { OverviewView } from './views/overview.js';
@@ -54,6 +55,7 @@ class TwinVoltApp {
       events: document.getElementById('view-events'),
       diagnostics: document.getElementById('view-diagnostics'),
       benchmarking: document.getElementById('view-benchmarking'),
+      datasets: document.getElementById('view-datasets'),
     };
 
     if (viewContainers.overview) this.views.overview = new OverviewView(viewContainers.overview);
@@ -64,11 +66,13 @@ class TwinVoltApp {
     if (viewContainers.events) this.views.events = new EventsView(viewContainers.events);
     if (viewContainers.diagnostics) this.views.diagnostics = new DiagnosticsView(viewContainers.diagnostics);
     if (viewContainers.benchmarking) this.views.benchmarking = new BenchmarkingView(viewContainers.benchmarking);
+    if (viewContainers.datasets) this.views.datasets = new DatasetLabView(viewContainers.datasets);
   }
 
   _setupNavigation() {
     const navButtons = document.querySelectorAll('.nav-item-btn');
     navButtons.forEach((btn) => {
+      btn.setAttribute('aria-current', btn.classList.contains('active') ? 'page' : 'false');
       btn.addEventListener('click', () => {
         const targetView = btn.getAttribute('data-view');
         if (targetView && this.views[targetView]) {
@@ -95,8 +99,10 @@ class TwinVoltApp {
     document.querySelectorAll('.nav-item-btn').forEach((btn) => {
       if (btn.getAttribute('data-view') === viewName) {
         btn.classList.add('active');
+        btn.setAttribute('aria-current', 'page');
       } else {
         btn.classList.remove('active');
+        btn.setAttribute('aria-current', 'false');
       }
     });
 
@@ -118,6 +124,8 @@ class TwinVoltApp {
       // 1. Fetch Health
       const health = await api.getHealth();
       store.apiHealth = health;
+      const version = document.getElementById('header-version');
+      if (version && health.version) version.textContent = `API v${health.version}`;
 
       // 2. Fetch Packs
       const packsRes = await api.getPacks();
@@ -133,10 +141,16 @@ class TwinVoltApp {
       }
     } catch (err) {
       console.warn('[TwinVolt] Initial REST sync notice:', err.message);
+      store.setTwinLoadError(err.message);
     }
   }
 
   async _selectTwin(systemId) {
+    store.setTwinLoadError(null);
+    // Clear the old twin before waiting for REST so its cached readings cannot
+    // be shown under the newly selected identifier.
+    wsClient.disconnect();
+    store.setActiveTwin(systemId, null);
     try {
       const twinStatus = await api.getTwin(systemId);
       store.setActiveTwin(systemId, twinStatus);
@@ -153,6 +167,7 @@ class TwinVoltApp {
       wsClient.connect(systemId);
     } catch (err) {
       console.error(`[TwinVolt] Failed to load twin status for ${systemId}:`, err);
+      store.setTwinLoadError(err.message);
     }
   }
 
@@ -161,29 +176,51 @@ class TwinVoltApp {
     const statusPill = document.getElementById('header-ws-status');
     const latencyEl = document.getElementById('header-latency');
     if (statusPill) {
-      statusPill.textContent = appState.wsStatus;
+      statusPill.replaceChildren();
+      const dot = document.createElement('span');
+      dot.className = 'indicator-dot';
+      dot.setAttribute('aria-hidden', 'true');
+      statusPill.append(dot, document.createTextNode(appState.wsStatus.replace('_', ' ')));
       statusPill.className = `status-pill ${appState.wsStatus.toLowerCase()}`;
+      statusPill.setAttribute('role', 'status');
+      statusPill.setAttribute('aria-label', `Twin stream ${appState.wsStatus.toLowerCase().replace('_', ' ')}`);
     }
     if (latencyEl) {
       if (appState.clientLatencyMs !== null && appState.wsStatus === 'CONNECTED') {
         latencyEl.textContent = `${appState.clientLatencyMs} ms`;
+        document.getElementById('latency-readout')?.removeAttribute('hidden');
       } else {
-        latencyEl.textContent = '-- ms';
+        latencyEl.textContent = '—';
+        document.getElementById('latency-readout')?.setAttribute('hidden', '');
       }
     }
 
     // 2. Update Twin Dropdown
     const twinSelect = document.getElementById('header-twin-select');
     if (twinSelect && changeType === 'TWINS_LIST') {
-      twinSelect.innerHTML = appState.allTwins.length > 0
-        ? appState.allTwins.map((id) => `<option value="${id}" ${id === appState.activeTwinId ? 'selected' : ''}>${id}</option>`).join('')
-        : '<option value="">No Active Twins</option>';
+      twinSelect.replaceChildren();
+      if (appState.allTwins.length > 0) {
+        appState.allTwins.forEach((twin) => {
+          const id = typeof twin === 'string' ? twin : twin.system_id;
+          if (!id) return;
+          const option = document.createElement('option');
+          option.value = id;
+          option.textContent = id;
+          option.selected = id === appState.activeTwinId;
+          twinSelect.append(option);
+        });
+      } else {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'No active twins';
+        twinSelect.append(option);
+      }
     }
 
     // 3. Update Active Views
     for (const view of Object.values(this.views)) {
       if (view && typeof view.update === 'function') {
-        view.update(changeType, appState);
+        view.update(changeType, appState, payload);
       }
     }
   }

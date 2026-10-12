@@ -15,8 +15,14 @@ class ApiClient {
       ...options.headers,
     };
 
+    const controller = new AbortController();
+    const externalSignal = options.signal;
+    const abortFromCaller = () => controller.abort(externalSignal?.reason);
+    if (externalSignal?.aborted) abortFromCaller();
+    else externalSignal?.addEventListener('abort', abortFromCaller, { once: true });
+    const timeout = setTimeout(() => controller.abort(new Error('Request timed out after 30 seconds.')), 30_000);
     try {
-      const res = await fetch(url, { ...options, headers });
+      const res = await fetch(url, { ...options, headers, signal: controller.signal });
       if (!res.ok) {
         let errData = {};
         try {
@@ -24,22 +30,38 @@ class ApiClient {
         } catch (_) {
           errData = { message: res.statusText };
         }
-        const error = new Error(errData.message || `HTTP Error ${res.status}`);
+        const error = new Error(errData.message || errData.detail || `HTTP Error ${res.status}`);
         error.status = res.status;
         error.errorType = errData.error_type || 'HttpError';
         error.details = errData.details || {};
         throw error;
       }
-      return await res.json();
+      if (res.status === 204) return null;
+      try { return await res.json(); }
+      catch (error) {
+        const invalid = new Error('The server returned an invalid JSON response.');
+        invalid.cause = error;
+        throw invalid;
+      }
     } catch (err) {
-      console.warn(`[API] ${options.method || 'GET'} ${path} failed:`, err.message);
-      throw err;
+      const error = err.name === 'AbortError'
+        ? new Error(externalSignal?.aborted ? 'Request was cancelled.' : 'Request timed out after 30 seconds.')
+        : (err instanceof TypeError ? new Error('Cannot reach the TwinVolt API. Check the server connection and retry.') : err);
+      console.warn(`[API] ${options.method || 'GET'} ${path} failed:`, error.message);
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+      externalSignal?.removeEventListener('abort', abortFromCaller);
     }
   }
 
   // Health
   async getHealth() {
     return this._request('/health');
+  }
+
+  async getGatewayStatus() {
+    return this._request('/api/v1/gateway/status');
   }
 
   // Battery Packs
@@ -109,8 +131,36 @@ class ApiClient {
     return this._request(`/api/v1/twins/${encodeURIComponent(systemId)}/state/history?limit=${limit}`);
   }
 
-  async getTelemetryHistory(systemId, limit = 100) {
-    return this._request(`/api/v1/twins/${encodeURIComponent(systemId)}/telemetry/history?limit=${limit}`);
+  async getTelemetryHistory(systemId, limit = 100, descending = false) {
+    return this._request(`/api/v1/twins/${encodeURIComponent(systemId)}/telemetry/history?limit=${limit}&descending=${descending}`);
+  }
+
+  // Dataset Lab (temporary in-memory uploads; separate from live telemetry)
+  async uploadDataset(file) {
+    const path = `/api/v1/datasets?filename=${encodeURIComponent(file.name)}`;
+    return this._request(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: file,
+    });
+  }
+
+  async getDatasets() { return this._request('/api/v1/datasets'); }
+  async getDataset(datasetId) { return this._request(`/api/v1/datasets/${encodeURIComponent(datasetId)}`); }
+  async getDatasetPreview(datasetId, offset = 0, limit = 25) {
+    return this._request(`/api/v1/datasets/${encodeURIComponent(datasetId)}/preview?offset=${offset}&limit=${limit}`);
+  }
+  async mapDataset(datasetId, mappings) {
+    return this._request(`/api/v1/datasets/${encodeURIComponent(datasetId)}/mappings`, {
+      method: 'PUT', body: JSON.stringify({ mappings }),
+    });
+  }
+  async getDatasetSeries(datasetId, columns, limit = 1500) {
+    const params = new URLSearchParams({ columns: columns.join(','), limit: String(limit) });
+    return this._request(`/api/v1/datasets/${encodeURIComponent(datasetId)}/series?${params}`);
+  }
+  async deleteDataset(datasetId) {
+    return this._request(`/api/v1/datasets/${encodeURIComponent(datasetId)}`, { method: 'DELETE' });
   }
 
   async resetTwin(systemId) {

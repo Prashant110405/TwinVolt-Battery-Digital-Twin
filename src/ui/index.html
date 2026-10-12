@@ -24,7 +24,7 @@
       <div class="header-brand">
         <img src="assets/logo.svg" alt="TwinVolt Logo" class="brand-logo" />
         <span class="brand-title">TwinVolt</span>
-        <span class="brand-tag">v1.0.0</span>
+        <span class="brand-tag" id="header-version">API v—</span>
       </div>
 
       <div class="header-center">
@@ -37,9 +37,9 @@
       </div>
 
       <div class="header-status">
-        <div style="display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-muted);">
+        <div class="latency-readout" id="latency-readout" hidden>
           <span>Latency:</span>
-          <span id="header-latency" style="color: var(--text-primary); font-weight: 600;">-- ms</span>
+          <span id="header-latency">—</span>
         </div>
         <div id="header-ws-status" class="status-pill disconnected">
           <span class="indicator-dot"></span>
@@ -50,7 +50,7 @@
 
     <!-- Navigation Sidebar -->
     <aside id="app-sidebar">
-      <nav>
+      <nav aria-label="Primary navigation">
         <ul class="nav-list">
           <li>
             <button class="nav-item-btn active" data-view="overview" aria-label="Overview View">
@@ -100,6 +100,12 @@
               <span class="nav-label">Benchmarking</span>
             </button>
           </li>
+          <li>
+            <button class="nav-item-btn" data-view="datasets" aria-label="Dataset Lab">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"></path><path d="M8 8h8M8 12h8M8 16h5"></path></svg>
+              <span class="nav-label">Dataset Lab</span>
+            </button>
+          </li>
         </ul>
       </nav>
 
@@ -119,6 +125,7 @@
       <div id="view-events" class="view-container"></div>
       <div id="view-diagnostics" class="view-container"></div>
       <div id="view-benchmarking" class="view-container"></div>
+      <div id="view-datasets" class="view-container"></div>
     </main>
   </div>
 

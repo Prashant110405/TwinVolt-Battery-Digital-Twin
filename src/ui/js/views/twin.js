@@ -48,8 +48,14 @@ export class TwinView {
                 </tbody>
               </table>
             </div>
+            <div class="twin-init-fields">
+              <label class="form-label" for="twin-initial-soc">Initial SOC (%)</label>
+              <input id="twin-initial-soc" class="form-input" type="number" min="0" max="100" step="0.1" placeholder="Required" />
+              <label class="form-label" for="twin-initial-temp">Initial model temperature (°C)</label>
+              <input id="twin-initial-temp" class="form-input" type="number" step="0.1" placeholder="Required" />
+            </div>
             <div style="display: flex; gap: var(--space-3); margin-top: var(--space-4);">
-              <button id="btn-init-twin" class="btn btn-primary btn-sm">Initialize (100% SOC)</button>
+              <button id="btn-init-twin" class="btn btn-primary btn-sm">Initialize model</button>
               <button id="btn-reset-twin" class="btn btn-secondary btn-sm">Reset State</button>
             </div>
           </div>
@@ -143,12 +149,21 @@ export class TwinView {
     if (btnInit) {
       btnInit.addEventListener('click', async () => {
         if (!store.activeTwinId) return;
+        const soc = Number(document.getElementById('twin-initial-soc')?.value);
+        const temperature = Number(document.getElementById('twin-initial-temp')?.value);
+        if (!Number.isFinite(soc) || soc < 0 || soc > 100 || !Number.isFinite(temperature)) {
+          this.showActionError('Enter a valid initial SOC (0–100%) and model temperature.');
+          return;
+        }
+        this.setPending(true);
         try {
-          await api.initializeTwin(store.activeTwinId, { initial_soc: 1.0, temperature_c: 25.0 });
+          await api.initializeTwin(store.activeTwinId, { initial_soc: soc / 100, temperature_c: temperature });
           const status = await api.getTwin(store.activeTwinId);
           store.setActiveTwin(store.activeTwinId, status);
         } catch (err) {
-          alert(`Failed to initialize twin: ${err.message}`);
+          this.showActionError(`Failed to initialize twin: ${err.message}`);
+        } finally {
+          this.setPending(false);
         }
       });
     }
@@ -157,18 +172,30 @@ export class TwinView {
     if (btnReset) {
       btnReset.addEventListener('click', async () => {
         if (!store.activeTwinId) return;
+        if (!window.confirm(`Reset model and estimator state for twin “${store.activeTwinId}”?`)) return;
+        this.setPending(true);
         try {
           await api.resetTwin(store.activeTwinId);
           const status = await api.getTwin(store.activeTwinId);
           store.setActiveTwin(store.activeTwinId, status);
         } catch (err) {
-          alert(`Failed to reset twin: ${err.message}`);
+          this.showActionError(`Failed to reset twin: ${err.message}`);
+        } finally {
+          this.setPending(false);
         }
       });
     }
   }
 
   update(changeType, appState) {
+    if (changeType === 'TWIN_CHANGED' && !appState.activePack) {
+      for (const id of ['pack-spec-name', 'pack-spec-mfg', 'pack-spec-topo', 'pack-spec-cells', 'pack-spec-ratings', 'pack-spec-limits']) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '—';
+      }
+      const chemistry = document.getElementById('pack-chem-badge');
+      if (chemistry) chemistry.textContent = 'Chemistry: —';
+    }
     if (appState.activeTwinStatus) {
       const st = appState.activeTwinStatus;
       const elId = document.getElementById('twin-info-id');
@@ -180,13 +207,13 @@ export class TwinView {
 
       if (elId) elId.textContent = st.system_id || '--';
       if (elPack) elPack.textContent = st.pack_id || '--';
-      if (elMod) elMod.textContent = st.model_name || 'GenericECMModel';
+      if (elMod) elMod.textContent = st.model_name || '—';
       if (elInit) elInit.textContent = st.is_initialized ? 'Initialized' : 'Uninitialized';
       if (elBadge) {
         elBadge.textContent = st.is_initialized ? 'ACTIVE / INITIALIZED' : 'UNINITIALIZED';
         elBadge.className = st.is_initialized ? 'badge badge-cyan' : 'badge badge-amber';
       }
-      if (elSteps) elSteps.textContent = st.total_steps || appState.stepCount;
+      if (elSteps) elSteps.textContent = Number.isFinite(st.total_steps) ? st.total_steps : '—';
     }
 
     if (appState.activePack) {
@@ -201,11 +228,14 @@ export class TwinView {
 
       if (elChem) elChem.textContent = `Chemistry: ${p.chemistry || '--'}`;
       if (elName) elName.textContent = p.display_name || p.pack_id || '--';
-      if (elMfg) elMfg.textContent = p.manufacturer || 'TwinVolt Universal Spec';
-      if (elTopo) elTopo.textContent = `${p.series_count}S ${p.parallel_count}P (${p.total_module_count} module(s))`;
-      if (elCells) elCells.textContent = `${p.total_cell_count} cells`;
-      if (elRatings) elRatings.textContent = `${p.nominal_voltage_v} V | ${p.nominal_capacity_ah} Ah (${p.nominal_energy_wh} Wh)`;
-      if (elLimits) elLimits.textContent = `${p.min_pack_voltage_v} V – ${p.max_pack_voltage_v} V Cutoff`;
+      if (elMfg) elMfg.textContent = p.manufacturer || '—';
+      if (elTopo) elTopo.textContent = Number.isFinite(p.series_count) && Number.isFinite(p.parallel_count)
+        ? `${p.series_count}S ${p.parallel_count}P (${Number.isFinite(p.total_module_count) ? `${p.total_module_count} module(s)` : 'module count —'})` : '—';
+      if (elCells) elCells.textContent = Number.isFinite(p.total_cell_count) ? `${p.total_cell_count} cells` : '—';
+      if (elRatings) elRatings.textContent = Number.isFinite(p.nominal_voltage_v) && Number.isFinite(p.nominal_capacity_ah)
+        ? `${p.nominal_voltage_v} V | ${p.nominal_capacity_ah} Ah${Number.isFinite(p.nominal_energy_wh) ? ` (${p.nominal_energy_wh} Wh)` : ''}` : '—';
+      if (elLimits) elLimits.textContent = Number.isFinite(p.min_pack_voltage_v) && Number.isFinite(p.max_pack_voltage_v)
+        ? `${p.min_pack_voltage_v} V – ${p.max_pack_voltage_v} V` : '—';
     }
 
     if (appState.latestState) {
@@ -215,6 +245,25 @@ export class TwinView {
       if (elV && s.terminal_voltage_v !== undefined) elV.textContent = Number(s.terminal_voltage_v).toFixed(3);
       if (elSoc && s.simulated_soc !== undefined) elSoc.textContent = (s.simulated_soc * 100).toFixed(1);
     }
+  }
+
+  setPending(pending) {
+    for (const id of ['btn-init-twin', 'btn-reset-twin']) {
+      const button = document.getElementById(id);
+      if (button) button.disabled = pending;
+    }
+  }
+
+  showActionError(message) {
+    let output = document.getElementById('twin-action-error');
+    if (!output) {
+      output = document.createElement('p');
+      output.id = 'twin-action-error';
+      output.className = 'action-message error';
+      output.setAttribute('role', 'alert');
+      document.querySelector('#view-twin .card')?.append(output);
+    }
+    output.textContent = message;
   }
 
   destroy() {}

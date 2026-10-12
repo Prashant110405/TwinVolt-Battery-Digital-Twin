@@ -58,23 +58,38 @@ export class EventsView {
         badge.textContent = `${appState.events.length} Events`;
       }
 
-      if (tbody && appState.events.length > 0) {
-        let html = '';
-        for (const evt of appState.events) {
-          const payloadStr = evt.payload ? JSON.stringify(evt.payload) : '{}';
-          html += `
-            <tr>
-              <td class="cell-mono">${evt.timestamp_ns || Date.now() * 1000000}</td>
-              <td><span class="badge badge-purple">${evt.event_type}</span></td>
-              <td class="cell-mono">${evt.system_id || '--'}</td>
-              <td class="cell-mono">${evt.event_id || '--'}</td>
-              <td class="cell-mono" style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                ${payloadStr}
-              </td>
-            </tr>
-          `;
+      if (tbody) {
+        const rows = appState.events
+          .filter((evt) => !evt.system_id || evt.system_id === appState.activeTwinId)
+          .map((evt) => {
+            const row = document.createElement('tr');
+            const values = [evt.timestamp_ns, evt.event_type, evt.system_id || '—', evt.event_id || '—', evt.payload ? JSON.stringify(evt.payload) : '{}'];
+            values.forEach((value, index) => {
+              const cell = document.createElement('td');
+              cell.className = 'cell-mono';
+              if (index === 4) cell.classList.add('event-payload');
+              if (index === 1) {
+                const badgeEl = document.createElement('span');
+                badgeEl.className = 'badge badge-purple';
+                badgeEl.textContent = String(value ?? '—');
+                cell.append(badgeEl);
+              } else {
+                cell.textContent = value === null || value === undefined ? '—' : String(value);
+              }
+              row.append(cell);
+            });
+            return row;
+          });
+        if (rows.length > 0) tbody.replaceChildren(...rows);
+        else {
+          const row = document.createElement('tr');
+          const cell = document.createElement('td');
+          cell.colSpan = 5;
+          cell.className = 'unavailable-text';
+          cell.textContent = 'No events are available for the selected twin.';
+          row.append(cell);
+          tbody.replaceChildren(row);
         }
-        tbody.innerHTML = html;
       }
     }
   }

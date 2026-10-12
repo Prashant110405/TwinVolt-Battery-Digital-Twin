@@ -27,7 +27,7 @@ export class EstimationView {
 
         <div class="col-4">
           <div class="card metric-widget">
-            <span class="metric-label">Estimated Online SOC (EKF)</span>
+            <span class="metric-label">Estimated Online SOC</span>
             <div class="metric-value-row">
               <span id="est-online-soc" class="metric-value">--</span>
               <span class="metric-unit">%</span>
@@ -50,8 +50,8 @@ export class EstimationView {
         <div class="col-12">
           <div class="card">
             <div class="card-header">
-              <span class="card-title">Observer Diagnostics & Advanced Estimation State</span>
-              <span class="badge badge-purple">KALMAN FILTER</span>
+              <span class="card-title">Estimation Outputs & Availability</span>
+              <span class="badge badge-gray">Backend-reported</span>
             </div>
             <div class="grid-12">
               <div class="col-6">
@@ -60,15 +60,15 @@ export class EstimationView {
                     <tbody>
                       <tr>
                         <td>Active Estimator Type</td>
-                        <td class="cell-mono">Extended Kalman Filter (EKF)</td>
+                        <td class="cell-mono">Not exposed by current API</td>
                       </tr>
                       <tr>
-                        <td>Current Health State (SOH)</td>
-                        <td id="est-soh" class="cell-mono">100.0% (Nominal)</td>
+                        <td>State of Health (SOH)</td>
+                        <td class="cell-mono">Not yet available from current API</td>
                       </tr>
                       <tr>
                         <td>Observability Quality State</td>
-                        <td><span class="badge badge-cyan">VALID</span></td>
+                        <td class="cell-mono">Not exposed by current API</td>
                       </tr>
                     </tbody>
                   </table>
@@ -82,6 +82,9 @@ export class EstimationView {
                   </p>
                 </div>
               </div>
+              <div class="col-12">
+                <p class="unavailable-text">RUL by criterion, uncertainty bounds, and prognostic validation are not exposed by the current API. No projection or confidence value is inferred in the UI.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -90,6 +93,12 @@ export class EstimationView {
   }
 
   update(changeType, appState) {
+    if (changeType === 'TWIN_CHANGED' && !appState.latestState) {
+      for (const id of ['est-sim-soc', 'est-online-soc', 'est-soc-discrepancy']) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '—';
+      }
+    }
     if (changeType === 'STATE_UPDATED' && appState.latestState) {
       const s = appState.latestState;
       const elSim = document.getElementById('est-sim-soc');

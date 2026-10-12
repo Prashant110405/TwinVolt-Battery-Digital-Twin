@@ -6,6 +6,7 @@
 
 import { api } from '../api.js';
 import { store } from '../state.js';
+import { escapeHTML } from '../html.js';
 
 export class BenchmarkingView {
   constructor(container) {
@@ -245,7 +246,7 @@ export class BenchmarkingView {
           select.innerHTML = '<option value="">No registered datasets</option>';
         } else {
           select.innerHTML = this.datasets
-            .map((d) => `<option value="${d.dataset_id}">${d.dataset_name} (${d.total_frames} frames, v${d.version})</option>`)
+            .map((d) => `<option value="${escapeHTML(d.dataset_id)}">${escapeHTML(d.dataset_name)} (${escapeHTML(d.total_frames)} frames, v${escapeHTML(d.version)})</option>`)
             .join('');
         }
       }
@@ -397,7 +398,7 @@ export class BenchmarkingView {
         signalsTable.innerHTML = rows
           .map((s) => `
             <tr>
-              <td><strong>${s.signal_name}</strong> (${s.unit})</td>
+              <td><strong>${escapeHTML(s.signal_name)}</strong> (${escapeHTML(s.unit)})</td>
               <td class="cell-mono">${s.mae !== null && s.mae !== undefined ? s.mae.toFixed(4) : '--'}</td>
               <td class="cell-mono">${s.rmse !== null && s.rmse !== undefined ? s.rmse.toFixed(4) : '--'}</td>
               <td class="cell-mono">${s.max_error !== null && s.max_error !== undefined ? s.max_error.toFixed(4) : '--'}</td>
@@ -463,13 +464,13 @@ export class BenchmarkingView {
 
               return `
                 <tr>
-                  <td class="cell-mono"><strong>${ev.event_id}</strong></td>
-                  <td>${ev.event_type}</td>
-                  <td class="cell-mono">${ev.expected_hypothesis_id || '--'}</td>
-                  <td><span class="badge ${statusBadgeClass}">${ev.match_status}</span></td>
+                  <td class="cell-mono"><strong>${escapeHTML(ev.event_id)}</strong></td>
+                  <td>${escapeHTML(ev.event_type)}</td>
+                  <td class="cell-mono">${escapeHTML(ev.expected_hypothesis_id || '--')}</td>
+                  <td><span class="badge ${statusBadgeClass}">${escapeHTML(ev.match_status)}</span></td>
                   <td class="cell-mono">${ev.latency_seconds !== null && ev.latency_seconds !== undefined ? `${ev.latency_seconds.toFixed(3)} s` : '--'}</td>
-                  <td>${ev.severity_at_detection || '--'}</td>
-                  <td style="font-size: var(--text-xs);">${channels}</td>
+                  <td>${escapeHTML(ev.severity_at_detection || '--')}</td>
+                  <td style="font-size: var(--text-xs);">${escapeHTML(channels)}</td>
                 </tr>
               `;
             })

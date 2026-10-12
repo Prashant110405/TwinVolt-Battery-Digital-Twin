@@ -5,6 +5,7 @@
 
 import { api } from '../api.js';
 import { store } from '../state.js';
+import { escapeHTML } from '../html.js';
 
 export class DiagnosticsView {
   constructor(container) {
@@ -214,7 +215,7 @@ export class DiagnosticsView {
     const elActions = this.container.querySelector('#diag-actions-list');
     if (elActions && diag.recommended_operator_actions) {
       elActions.innerHTML = diag.recommended_operator_actions
-        .map((a) => `<li>${a}</li>`)
+        .map((a) => `<li>${escapeHTML(a)}</li>`)
         .join('');
     }
 
@@ -228,20 +229,22 @@ export class DiagnosticsView {
       if (elConfidence) elConfidence.textContent = diag.primary_hypothesis.evidence_strength_tier || diag.primary_hypothesis.confidence_level;
       
       const scoreBadge = this.container.querySelector('#diag-hyp-score');
-      if (scoreBadge) scoreBadge.textContent = `Score: ${(diag.primary_hypothesis.evidence_score || 0).toFixed(2)}`;
+      if (scoreBadge) scoreBadge.textContent = Number.isFinite(diag.primary_hypothesis.evidence_score)
+        ? `Score: ${diag.primary_hypothesis.evidence_score.toFixed(2)}` : 'Score: —';
       
       const elCat = this.container.querySelector('#diag-hyp-cat');
       if (elCat) elCat.textContent = diag.primary_hypothesis.category;
 
       const elCov = this.container.querySelector('#diag-hyp-coverage');
-      if (elCov) elCov.textContent = `${((diag.primary_hypothesis.required_signal_coverage || 0) * 100).toFixed(0)}%`;
+      if (elCov) elCov.textContent = Number.isFinite(diag.primary_hypothesis.required_signal_coverage)
+        ? `${(diag.primary_hypothesis.required_signal_coverage * 100).toFixed(0)}%` : '—';
 
       const elCrit = this.container.querySelector('#diag-hyp-critical');
       if (elCrit) elCrit.textContent = diag.primary_hypothesis.is_critical_eligible ? 'YES' : 'NO';
 
       const elConfounds = this.container.querySelector('#diag-hyp-confounds');
       if (elConfounds && diag.primary_hypothesis.untestable_confounds) {
-        elConfounds.innerHTML = diag.primary_hypothesis.untestable_confounds.join('<br/>') || 'None';
+        elConfounds.innerHTML = diag.primary_hypothesis.untestable_confounds.map(escapeHTML).join('<br/>') || 'None';
       }
     } else {
       if (elLead) elLead.textContent = 'None (Nominal Operation)';
@@ -261,15 +264,15 @@ export class DiagnosticsView {
 
     tbody.innerHTML = hypotheses
       .map((h) => {
-        const score = (h.evidence_score || 0).toFixed(2);
-        const cov = `${((h.required_signal_coverage || 0) * 100).toFixed(0)}%`;
+        const score = Number.isFinite(h.evidence_score) ? h.evidence_score.toFixed(2) : '—';
+        const cov = Number.isFinite(h.required_signal_coverage) ? `${(h.required_signal_coverage * 100).toFixed(0)}%` : '—';
         const crit = h.is_critical_eligible ? '<span style="color: var(--color-danger); font-weight: 600;">YES</span>' : 'NO';
         return `
           <tr>
-            <td class="cell-mono" style="font-weight: 600;">${h.hypothesis_id}</td>
-            <td><span class="badge badge-purple">${h.category}</span></td>
+            <td class="cell-mono" style="font-weight: 600;">${escapeHTML(h.hypothesis_id)}</td>
+            <td><span class="badge badge-purple">${escapeHTML(h.category)}</span></td>
             <td class="cell-mono">${score}</td>
-            <td><span class="badge badge-gray">${h.evidence_strength_tier || h.confidence_level || 'NO_EVIDENCE'}</span></td>
+            <td><span class="badge badge-gray">${escapeHTML(h.evidence_strength_tier || h.confidence_level || 'NO_EVIDENCE')}</span></td>
             <td class="cell-mono">${cov}</td>
             <td class="cell-mono">${crit}</td>
           </tr>

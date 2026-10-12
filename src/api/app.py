@@ -13,6 +13,7 @@ from src.api.routes.health import router as health_router
 from src.api.routes.packs import router as packs_router
 from src.api.routes.replay import router as replay_router
 from src.api.routes.telemetry import router as telemetry_router
+from src.api.routes.datasets import router as datasets_router
 from src.api.routes.twins import router as twins_router
 from src.api.websocket.handlers import router as websocket_router
 from src.api.websocket.manager import WebSocketConnectionManager
@@ -70,6 +71,7 @@ def create_app(
     app.include_router(packs_router)
     app.include_router(twins_router)
     app.include_router(telemetry_router)
+    app.include_router(datasets_router)
     app.include_router(replay_router)
     app.include_router(benchmarks_router)
     app.include_router(websocket_router)
