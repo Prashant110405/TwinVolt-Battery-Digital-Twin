@@ -26,6 +26,18 @@ def main() -> None:
         default=None,
         help="Automatically start registered edge gateway sources upon server startup",
     )
+    parser.add_argument(
+        "--seed-defaults",
+        action="store_true",
+        default=True,
+        help="Automatically register battery profiles and sample twin on startup",
+    )
+    parser.add_argument(
+        "--no-seed-defaults",
+        dest="seed_defaults",
+        action="store_false",
+        help="Disable automatic loading of default battery profiles and sample twin",
+    )
 
     args = parser.parse_args()
 
@@ -41,6 +53,8 @@ def main() -> None:
         settings.log_level = args.log_level
     if args.gateway_autostart is not None:
         settings.gateway_autostart = args.gateway_autostart
+    if args.seed_defaults is not None:
+        settings.seed_defaults = args.seed_defaults
 
     print("==================================================================")
     print("  TwinVolt — Universal Battery Digital Twin Platform")

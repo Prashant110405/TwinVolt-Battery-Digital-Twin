@@ -55,6 +55,14 @@ def create_lifespan(settings: Optional[AppSettings] = None):
                 logger.error("Failed to autostart GatewayDaemonManager: %s", exc)
                 # Allow server to run so health endpoints reflect the error
 
+        # 3. Seed default battery pack profiles and digital twin if enabled
+        if app_settings.seed_defaults and hasattr(app.state, "services") and app.state.services is not None:
+            try:
+                from src.runtime.seeder import seed_default_twins_and_packs
+                seed_default_twins_and_packs(app.state.services)
+            except Exception as exc:
+                logger.warning("Failed to seed default battery profiles: %s", exc)
+
         try:
             yield
         finally:

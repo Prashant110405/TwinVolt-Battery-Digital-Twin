@@ -75,10 +75,23 @@ def create_app(
     app.include_router(websocket_router)
     app.include_router(gateway_router)
 
-    # Mount UI Static Files
+    # Mount UI Static Files and Asset Directories
     ui_dir = Path(__file__).resolve().parent.parent / "ui"
     if ui_dir.is_dir():
         app.mount("/ui", StaticFiles(directory=str(ui_dir), html=True), name="ui")
+        if (ui_dir / "css").is_dir():
+            app.mount("/css", StaticFiles(directory=str(ui_dir / "css")), name="css_static")
+        if (ui_dir / "js").is_dir():
+            app.mount("/js", StaticFiles(directory=str(ui_dir / "js")), name="js_static")
+        if (ui_dir / "assets").is_dir():
+            app.mount("/assets", StaticFiles(directory=str(ui_dir / "assets")), name="assets_static")
+
+        @app.get("/favicon.ico", include_in_schema=False)
+        async def serve_favicon():
+            logo_path = ui_dir / "assets" / "logo.svg"
+            if logo_path.is_file():
+                return FileResponse(str(logo_path), media_type="image/svg+xml")
+            return FileResponse(str(ui_dir / "index.html"))
 
         @app.get("/", include_in_schema=False)
         async def serve_root():

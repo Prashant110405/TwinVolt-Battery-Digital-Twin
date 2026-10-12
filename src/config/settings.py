@@ -27,6 +27,7 @@ class AppSettings(BaseModel):
         description="Overflow backpressure policy (DROP_OLDEST, DROP_NEWEST, BLOCK).",
     )
     storage_dir: str = Field("data/storage", description="Base filesystem directory for file-backed persistence.")
+    seed_defaults: bool = Field(False, description="Whether to automatically load default battery profiles and sample digital twin.")
 
     @field_validator("log_level", mode="before")
     @classmethod
@@ -84,6 +85,10 @@ class AppSettings(BaseModel):
 
         if "TWINVOLT_STORAGE_DIR" in source:
             kwargs["storage_dir"] = source["TWINVOLT_STORAGE_DIR"]
+
+        if "TWINVOLT_SEED_DEFAULTS" in source:
+            val = source["TWINVOLT_SEED_DEFAULTS"].strip().lower()
+            kwargs["seed_defaults"] = val in ("true", "1", "yes", "on")
 
         return cls(**kwargs)
 
