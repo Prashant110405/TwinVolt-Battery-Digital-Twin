@@ -73,7 +73,10 @@ def _timestamp_ns(value: Any, unit: Optional[str]) -> Optional[int]:
     if numeric is not None:
         if unit not in TIMESTAMP_FACTORS:
             return None
-        return int(numeric * TIMESTAMP_FACTORS[unit])
+        nanoseconds = numeric * TIMESTAMP_FACTORS[unit]
+        if not math.isfinite(nanoseconds) or abs(nanoseconds) > 8.64e21:
+            return None
+        return int(nanoseconds)
     if isinstance(value, str):
         try:
             parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
@@ -162,18 +165,21 @@ def _column_profile(columns: list[str], rows: list[dict[str, Any]]) -> list[dict
         missing = sum(value is None or (isinstance(value, str) and not value.strip()) for value in values)
         parsed = [_number(value) for value in values]
         finite = [value for value in parsed if value is not None]
-        invalid_numeric = sum(
-            isinstance(value, str) and value.strip() and value.strip().lower() not in {"nan", "inf", "+inf", "-inf", "infinity", "+infinity", "-infinity"}
-            and _number(value) is None
-            for value in values
-        )
         non_finite_tokens = {"nan", "inf", "+inf", "-inf", "infinity", "+infinity", "-infinity"}
         non_finite = sum(
             (isinstance(value, (float, int)) and not isinstance(value, bool) and not math.isfinite(float(value)))
             or (isinstance(value, str) and value.strip().lower() in non_finite_tokens)
             for value in values
         )
-        if finite and len(finite) + missing == len(values):
+        has_numeric_evidence = bool(finite or non_finite)
+        invalid_numeric = sum(
+            has_numeric_evidence and isinstance(value, str) and value.strip()
+            and value.strip().lower() not in non_finite_tokens and _number(value) is None
+            for value in values
+        )
+        if has_numeric_evidence and invalid_numeric:
+            inferred = "mixed_numeric_text"
+        elif has_numeric_evidence:
             inferred = "numeric"
         elif all(isinstance(value, bool) or value is None for value in values):
             inferred = "boolean"
@@ -326,6 +332,8 @@ class DatasetLabStore:
         if indices[-1] != len(rows) - 1:
             indices.append(len(rows) - 1)
         time_map = mapping.get("timestamp")
+        all_timestamps = [_timestamp_ns(row.get(time_map["column"]), time_map.get("unit")) for row in rows] if time_map else []
+        valid_timestamps = [stamp for stamp in all_timestamps if stamp is not None]
         points = []
         previous_idx = -1
         for idx in indices:
@@ -369,6 +377,8 @@ class DatasetLabStore:
         return {"points": points, "raw_row_count": len(rows), "rendered_point_count": len(points), "stride": stride,
                 "downsampling": "Deterministic row stride with final row retained; source rows are unchanged.",
                 "x_axis": "timestamp_ns" if time_map else "row_index",
+                "x_min_ns": min(valid_timestamps) if valid_timestamps else None,
+                "x_max_ns": max(valid_timestamps) if valid_timestamps else None,
                 "derived": {"calculated_power_w": {"label": "Calculated power", "formula": "P = V × I", "sign_convention": "Dataset current-sign convention is unknown; sign is preserved, no direction inferred."}} if "calculated_power_w" in columns else {}}
 
     def delete(self, dataset_id: str) -> None:

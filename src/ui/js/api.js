@@ -156,7 +156,8 @@ class ApiClient {
     });
   }
   async getDatasetSeries(datasetId, columns, limit = 1500) {
-    const params = new URLSearchParams({ columns: columns.join(','), limit: String(limit) });
+    const params = new URLSearchParams({ limit: String(limit) });
+    columns.forEach((column) => params.append('columns', column));
     return this._request(`/api/v1/datasets/${encodeURIComponent(datasetId)}/series?${params}`);
   }
   async deleteDataset(datasetId) {

@@ -38,7 +38,7 @@ export class DatasetLabView {
             <div class="dataset-upload-icon" aria-hidden="true">↑</div>
             <strong>Drop a dataset file here or browse</strong>
             <span>CSV and JSON are enabled. Maximum upload size is configured by the server.</span>
-            <span class="dataset-format-note">Files are parsed in memory and expire after one hour. XLSX/XLS and Parquet parsers are not installed in this environment.</span>
+            <span class="dataset-format-note">Files are parsed in memory and expire after one hour. XLSX/XLS and Parquet parsers are not installed in this environment. For Kaggle, upload an already downloaded CSV or JSON file.</span>
           </div>
           <div id="dataset-upload-status" class="action-message" role="status" aria-live="polite"></div>
         </div>
@@ -51,6 +51,7 @@ export class DatasetLabView {
             <div id="dataset-detail" class="card dataset-empty">Select a dataset or upload a CSV/JSON file to begin.</div>
           </div>
         </div>
+        <div class="card dataset-replay-note"><strong>Replay stays separate</strong><p>The current CSV replay API runs against the selected Twin instance and defaults to resetting it. Dataset replay is not enabled here until an isolated replay sandbox is available.</p></div>
       </section>`;
     this._bind();
     this.loadDatasets();
@@ -272,8 +273,8 @@ export class DatasetLabView {
       ctx.fillText((max - (max - min) * i / 4).toPrecision(4), 3, y + 4);
     }
     const timestamps = result.points.map((point) => point.timestamp_ns).filter(Number.isFinite);
-    const minX = result.x_axis === 'timestamp_ns' && timestamps.length ? Math.min(...timestamps) : 0;
-    const maxX = result.x_axis === 'timestamp_ns' && timestamps.length ? Math.max(...timestamps) : Math.max(result.raw_row_count - 1, 0);
+    const minX = result.x_axis === 'timestamp_ns' && timestamps.length ? result.x_min_ns : 0;
+    const maxX = result.x_axis === 'timestamp_ns' && timestamps.length ? result.x_max_ns : Math.max(result.raw_row_count - 1, 0);
     const xFraction = (point) => {
       if (result.x_axis === 'timestamp_ns') {
         if (!Number.isFinite(point.timestamp_ns)) return null;

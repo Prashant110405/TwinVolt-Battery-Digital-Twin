@@ -38,4 +38,6 @@ class DatasetSeriesDTO(BaseModel):
     stride: int
     downsampling: str
     x_axis: str
+    x_min_ns: Optional[int] = None
+    x_max_ns: Optional[int] = None
     derived: dict[str, Any]

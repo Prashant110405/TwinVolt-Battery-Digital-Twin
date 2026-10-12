@@ -88,10 +88,10 @@ async def map_dataset(dataset_id: str, payload: DatasetMappingRequestDTO, reques
 
 @router.get("/{dataset_id}/series", response_model=DatasetSeriesDTO, summary="Query explicitly mapped series with bounded downsampling")
 async def dataset_series(
-    dataset_id: str, request: Request, columns: str = Query(..., min_length=1), limit: int = Query(1500, ge=1, le=2000)
+    dataset_id: str, request: Request, columns: list[str] = Query(..., min_length=1), limit: int = Query(1500, ge=1, le=2000)
 ) -> DatasetSeriesDTO:
     try:
-        result = _store(request).series(dataset_id, list(dict.fromkeys(name for name in columns.split(",") if name)), limit)
+        result = _store(request).series(dataset_id, list(dict.fromkeys(name for name in columns if name)), limit)
         return DatasetSeriesDTO(**result)
     except KeyError as exc:
         raise _not_found(exc) from exc

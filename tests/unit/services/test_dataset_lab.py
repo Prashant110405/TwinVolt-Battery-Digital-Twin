@@ -113,7 +113,7 @@ def test_dataset_api_upload_profile_preview_map_series_delete_and_error_response
             "current": {"column": "i", "unit": "A"},
         }})
         assert mapped.status_code == 200
-        series = client.get(f"/api/v1/datasets/{dataset_id}/series?columns=v,i,calculated_power_w")
+        series = client.get(f"/api/v1/datasets/{dataset_id}/series?columns=v&columns=i&columns=calculated_power_w")
         assert series.status_code == 200
         assert series.json()["points"][0]["calculated_power_w"] == 8
         assert client.get(f"/api/v1/datasets/{dataset_id}/preview").json()["rows"][0]["v"] == "4"

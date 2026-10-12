@@ -351,5 +351,8 @@
 .dataset-table-scroll { max-height:360px; overflow:auto; }
 .dataset-table-scroll table { min-width:max-content; }
 .dataset-pager { display:flex; align-items:center; gap:.5rem; color:var(--text-muted); font-size:var(--text-xs); }
+.dataset-replay-note { margin-top:var(--space-4); color:var(--text-secondary); font-size:var(--text-sm); }
+.dataset-replay-note strong { color:var(--text-primary); }
+.dataset-replay-note p { margin-top:.25rem; }
 @media(max-width:760px) { .dataset-page-heading { align-items:flex-start; } .dataset-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .dataset-mapping-row { grid-template-columns:1fr 1fr; } .dataset-mapping-row label { grid-column:1/-1; } .dataset-chart-grid { grid-template-columns:1fr; } }
 @media(max-width:480px) { .dataset-page-heading h1 { font-size:var(--text-2xl); } .dataset-detail-head { align-items:flex-start; flex-direction:column; } .dataset-pager { flex-wrap:wrap; justify-content:flex-end; } }
