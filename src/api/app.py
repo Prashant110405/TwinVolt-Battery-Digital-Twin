@@ -123,25 +123,18 @@ def create_app(
             },
         )
 
-    # Client-side SPA navigation routes
-    spa_views = [
-        "overview",
-        "telemetry",
-        "twin",
-        "estimation",
-        "replay",
-        "events",
-        "diagnostics",
-        "benchmarking",
-        "datasets",
-    ]
-    for view in spa_views:
-        @app.get(f"/{view}", include_in_schema=False)
-        @app.get(f"/ui/{view}", include_in_schema=False)
-        async def serve_spa_view():
-            if ui_dir is not None and (ui_dir / "index.html").is_file():
-                return FileResponse(str(ui_dir / "index.html"))
-            return JSONResponse({"view": "spa", "status": "online"})
+    # Client-side SPA navigation routes — define each handler explicitly to avoid closure capture bug
+    async def _spa_handler():
+        if ui_dir is not None and (ui_dir / "index.html").is_file():
+            return FileResponse(str(ui_dir / "index.html"))
+        return JSONResponse({"status": "online"})
+
+    for _view in [
+        "overview", "telemetry", "twin", "estimation",
+        "replay", "events", "diagnostics", "benchmarking", "datasets",
+    ]:
+        app.add_api_route(f"/{_view}", _spa_handler, include_in_schema=False, response_model=None)
+        app.add_api_route(f"/ui/{_view}", _spa_handler, include_in_schema=False, response_model=None)
 
     # Explicit API discovery endpoints
     @app.get("/api", tags=["System"])
