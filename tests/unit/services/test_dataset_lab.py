@@ -52,7 +52,7 @@ def test_non_finite_values_and_custom_numeric_series_are_reported():
 
 def test_downsampling_marks_skipped_missing_samples_as_gaps():
     store = DatasetLabStore()
-    dataset = store.add("x.csv", b"v\n1\n\n3\n4\n5\n")
+    dataset = store.add("x.csv", b"v\n1\nNaN\n3\n4\n5\n")
     store.map_columns(dataset["dataset_id"], {"voltage": {"column": "v", "unit": "V"}})
     series = store.series(dataset["dataset_id"], ["v"], 2)
     assert series["raw_row_count"] == 5
@@ -101,12 +101,14 @@ def test_dataset_api_upload_profile_preview_map_series_delete_and_error_response
 
     app = create_app(settings=AppSettings(seed_defaults=False))
     with TestClient(app) as client:
+        telemetry_count_before = app.state.services.telemetry_repo.count()
         response = client.post("/api/v1/datasets?filename=../test.csv", content=b"t,v,i\n2025-01-01T00:00:00Z,4,2\n", headers={"content-type": "text/plain"})
         assert response.status_code == 201
         body = response.json()
         assert body["filename"] == "test.csv"
         dataset_id = body["dataset_id"]
         assert body["profile"]["row_count"] == 1
+        assert app.state.services.telemetry_repo.count() == telemetry_count_before
 
         mapped = client.put(f"/api/v1/datasets/{dataset_id}/mappings", json={"mappings": {
             "timestamp": {"column": "t"}, "voltage": {"column": "v", "unit": "V"},
