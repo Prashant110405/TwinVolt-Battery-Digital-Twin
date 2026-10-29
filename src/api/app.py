@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Optional
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from src.api.dependencies import ServiceContainer, create_default_services
@@ -77,9 +77,16 @@ def create_app(
     app.include_router(websocket_router)
     app.include_router(gateway_router)
 
-    # Mount UI Static Files and Asset Directories
-    ui_dir = Path(__file__).resolve().parent.parent / "ui"
-    if ui_dir.is_dir():
+    # Robust UI Static Files Resolution across local, Docker, and Vercel Serverless layouts
+    candidates = [
+        Path(__file__).resolve().parent.parent / "ui",
+        Path.cwd() / "src" / "ui",
+        Path.cwd() / "ui",
+        Path(__file__).resolve().parents[2] / "src" / "ui" if len(Path(__file__).resolve().parents) > 2 else Path.cwd() / "src" / "ui",
+    ]
+    ui_dir = next((p for p in candidates if (p / "index.html").is_file()), None)
+
+    if ui_dir is not None:
         app.mount("/ui", StaticFiles(directory=str(ui_dir), html=True), name="ui")
         if (ui_dir / "css").is_dir():
             app.mount("/css", StaticFiles(directory=str(ui_dir / "css")), name="css_static")
@@ -88,15 +95,76 @@ def create_app(
         if (ui_dir / "assets").is_dir():
             app.mount("/assets", StaticFiles(directory=str(ui_dir / "assets")), name="assets_static")
 
-        @app.get("/favicon.ico", include_in_schema=False)
-        async def serve_favicon():
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def serve_favicon():
+        if ui_dir is not None:
             logo_path = ui_dir / "assets" / "logo.svg"
             if logo_path.is_file():
                 return FileResponse(str(logo_path), media_type="image/svg+xml")
-            return FileResponse(str(ui_dir / "index.html"))
+            if (ui_dir / "index.html").is_file():
+                return FileResponse(str(ui_dir / "index.html"))
+        return JSONResponse({"status": "no favicon"}, status_code=204)
 
-        @app.get("/", include_in_schema=False)
-        async def serve_root():
+    @app.get("/", include_in_schema=False)
+    @app.get("/index.html", include_in_schema=False)
+    async def serve_root():
+        if ui_dir is not None and (ui_dir / "index.html").is_file():
             return FileResponse(str(ui_dir / "index.html"))
+        return JSONResponse(
+            status_code=200,
+            content={
+                "name": title,
+                "status": "online",
+                "version": version,
+                "description": description,
+                "docs_url": "/docs",
+                "health_url": "/health",
+                "api_prefix": "/api/v1",
+            },
+        )
+
+    # Client-side SPA navigation routes
+    spa_views = [
+        "overview",
+        "telemetry",
+        "twin",
+        "estimation",
+        "replay",
+        "events",
+        "diagnostics",
+        "benchmarking",
+        "datasets",
+    ]
+    for view in spa_views:
+        @app.get(f"/{view}", include_in_schema=False)
+        @app.get(f"/ui/{view}", include_in_schema=False)
+        async def serve_spa_view():
+            if ui_dir is not None and (ui_dir / "index.html").is_file():
+                return FileResponse(str(ui_dir / "index.html"))
+            return JSONResponse({"view": "spa", "status": "online"})
+
+    # Explicit API discovery endpoints
+    @app.get("/api", tags=["System"])
+    @app.get("/api/", tags=["System"])
+    @app.get("/api/index", include_in_schema=False)
+    @app.get("/api/index.py", include_in_schema=False)
+    async def serve_api_root():
+        return {
+            "name": title,
+            "status": "online",
+            "version": version,
+            "docs_url": "/docs",
+            "health_url": "/health",
+            "endpoints": {
+                "health": "/health",
+                "packs": "/api/v1/packs",
+                "twins": "/api/v1/twins",
+                "telemetry": "/api/v1/telemetry",
+                "datasets": "/api/v1/datasets",
+                "replay": "/api/v1/replay",
+                "benchmarks": "/api/v1/benchmarks",
+                "gateway": "/api/v1/gateway",
+            },
+        }
 
     return app

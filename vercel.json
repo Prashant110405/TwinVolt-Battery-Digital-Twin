@@ -1,43 +1,15 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "outputDirectory": "src/ui",
-  "rewrites": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/index.py"
-    },
+      "src": "api/index.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
     {
-      "source": "/health",
-      "destination": "/api/index.py"
-    },
-    {
-      "source": "/docs",
-      "destination": "/api/index.py"
-    },
-    {
-      "source": "/openapi.json",
-      "destination": "/api/index.py"
-    },
-    {
-      "source": "/redoc",
-      "destination": "/api/index.py"
-    },
-    {
-      "source": "/favicon.ico",
-      "destination": "/assets/logo.svg"
-    },
-    {
-      "source": "/ui",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/ui/(.*)",
-      "destination": "/$1"
-    },
-    {
-      "source": "/((?!api/|health|docs|openapi.json|redoc).*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "api/index.py"
     }
   ]
 }
-
