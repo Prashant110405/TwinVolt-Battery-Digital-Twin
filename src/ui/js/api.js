@@ -20,17 +20,21 @@
 
 /**
  * Resolves the REST API base URL from the runtime configuration object
- * injected by config.js, or defaults to relative '' for same-origin (local dev).
+ * injected by config.js, or defaults to relative '' for same-origin (local dev
+ * or unified Vercel deployment). Supports both TWINVOLT_* and VITE_* variable styles.
  * @returns {string}
  */
 function _resolveApiBaseUrl() {
-  if (
-    typeof window !== 'undefined' &&
-    typeof window.TWINVOLT_API_BASE_URL === 'string' &&
-    window.TWINVOLT_API_BASE_URL !== '' &&
-    window.TWINVOLT_API_BASE_URL !== '__TWINVOLT_API_BASE_URL__'
-  ) {
-    return window.TWINVOLT_API_BASE_URL.replace(/\/+$/, '');
+  if (typeof window !== 'undefined') {
+    const candidate = window.TWINVOLT_API_BASE_URL || window.VITE_API_BASE_URL;
+    if (
+      typeof candidate === 'string' &&
+      candidate !== '' &&
+      candidate !== '__TWINVOLT_API_BASE_URL__' &&
+      candidate !== '__VITE_API_BASE_URL__'
+    ) {
+      return candidate.replace(/\/+$/, '');
+    }
   }
   return '';
 }
@@ -38,20 +42,20 @@ function _resolveApiBaseUrl() {
 /**
  * Resolves the WebSocket base URL (wss:// or ws://) from the runtime config,
  * or derives it from window.location for the same-origin case.
- * Exported so websocket.js can import it without a separate module.
+ * Supports both TWINVOLT_* and VITE_* variable styles.
  * @returns {string}
  */
 export function resolveWsBaseUrl() {
-  if (
-    typeof window !== 'undefined' &&
-    typeof window.TWINVOLT_WS_BASE_URL === 'string' &&
-    window.TWINVOLT_WS_BASE_URL !== '' &&
-    window.TWINVOLT_WS_BASE_URL !== '__TWINVOLT_WS_BASE_URL__'
-  ) {
-    return window.TWINVOLT_WS_BASE_URL.replace(/\/+$/, '');
-  }
-  // Same-origin fallback: derive ws(s):// from the current page's host
   if (typeof window !== 'undefined') {
+    const candidate = window.TWINVOLT_WS_BASE_URL || window.VITE_WS_BASE_URL;
+    if (
+      typeof candidate === 'string' &&
+      candidate !== '' &&
+      candidate !== '__TWINVOLT_WS_BASE_URL__' &&
+      candidate !== '__VITE_WS_BASE_URL__'
+    ) {
+      return candidate.replace(/\/+$/, '');
+    }
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     return proto + '//' + window.location.host;
   }

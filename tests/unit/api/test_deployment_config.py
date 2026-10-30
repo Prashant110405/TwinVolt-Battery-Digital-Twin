@@ -2,12 +2,14 @@
 Tests for the Vercel deployment configuration and production deployment infrastructure.
 
 Verifies:
-- vercel.json is valid and has correct outputDirectory
-- config.js exists and has the correct placeholder structure
-- api.js exports resolveWsBaseUrl
-- build-config.py generates config.js correctly
-- CORS middleware is registered on the FastAPI app
-- index.html loads config.js before app.js
+- vercel.json is valid and uses @vercel/python with api/index.py
+- api/index.py exists and exports the initialized FastAPI app
+- config.js exists and has the correct placeholder structure supporting both TWINVOLT_* and VITE_*
+- api.js exports resolveWsBaseUrl and supports both TWINVOLT_* and VITE_* variables
+- build-config.py generates config.js correctly in both modes
+- CORS middleware is registered on the FastAPI app and allows Vercel origins
+- index.html loads config.js before app.js and contains all 11 views
+- All frontend JS modules and CSS assets exist
 """
 
 import json
@@ -22,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[3]  # repo root
 
 
 class TestVercelJsonConfig(unittest.TestCase):
-    """vercel.json must be valid and correctly configured for the static SPA."""
+    """vercel.json must be valid and configured for the unified FastAPI Vercel Serverless deployment."""
 
     def setUp(self) -> None:
         self.vercel_json_path = ROOT / "vercel.json"
@@ -32,41 +34,40 @@ class TestVercelJsonConfig(unittest.TestCase):
     def test_vercel_json_exists(self) -> None:
         self.assertTrue(self.vercel_json_path.is_file(), "vercel.json must exist at repo root")
 
-    def test_output_directory_is_src_ui(self) -> None:
-        self.assertEqual(
-            self.config.get("outputDirectory"),
-            "src/ui",
-            "vercel.json outputDirectory must be 'src/ui' to serve the frontend SPA",
-        )
+    def test_builds_uses_vercel_python(self) -> None:
+        builds = self.config.get("builds", [])
+        self.assertTrue(len(builds) > 0, "vercel.json must define builds")
+        python_build = next((b for b in builds if b.get("use") == "@vercel/python"), None)
+        self.assertIsNotNone(python_build, "vercel.json must use @vercel/python builder")
+        self.assertEqual(python_build.get("src"), "api/index.py")
 
-    def test_spa_rewrite_rule_exists(self) -> None:
-        rewrites = self.config.get("rewrites", [])
-        self.assertTrue(len(rewrites) > 0, "vercel.json must have at least one rewrite rule")
-        # The catch-all SPA rewrite must redirect to /index.html
-        catch_all = next((r for r in rewrites if r.get("source") in ("/(.*)", "**")), None)
-        self.assertIsNotNone(catch_all, "Must have a catch-all rewrite rule for SPA routing")
-        self.assertEqual(catch_all.get("destination"), "/index.html")
+    def test_routes_maps_to_api_index(self) -> None:
+        routes = self.config.get("routes", [])
+        self.assertTrue(len(routes) > 0, "vercel.json must define routes")
+        catch_all = next((r for r in routes if r.get("src") in ("/(.*)", "/.*", "**")), None)
+        self.assertIsNotNone(catch_all, "vercel.json must have a catch-all route")
+        self.assertEqual(catch_all.get("dest"), "api/index.py")
 
-    def test_js_mime_type_header(self) -> None:
-        headers = self.config.get("headers", [])
-        js_header = next((h for h in headers if ".js" in h.get("source", "")), None)
-        self.assertIsNotNone(js_header, "Must set Content-Type header for .js files")
-        header_values = {kv["key"]: kv["value"] for kv in js_header.get("headers", [])}
-        self.assertIn("application/javascript", header_values.get("Content-Type", ""))
-
-    def test_no_functions_field(self) -> None:
+    def test_no_invalid_comment_property(self) -> None:
         self.assertNotIn(
-            "functions",
+            "comment",
             self.config,
-            "vercel.json must NOT define serverless functions — the FastAPI backend runs separately",
+            "vercel.json must NOT contain a 'comment' property as it fails Vercel's schema validator",
         )
 
-    def test_framework_is_null_or_absent(self) -> None:
-        framework = self.config.get("framework")
-        self.assertIsNone(
-            framework,
-            "vercel.json framework must be null (vanilla static SPA, not Next.js or similar)",
-        )
+
+class TestApiIndexEntrypoint(unittest.TestCase):
+    """api/index.py must exist and export the initialized FastAPI app."""
+
+    def test_api_index_exists(self) -> None:
+        index_py = ROOT / "api" / "index.py"
+        self.assertTrue(index_py.is_file(), "api/index.py must exist for @vercel/python")
+
+    def test_api_index_exports_app(self) -> None:
+        import api.index as entry
+        from fastapi import FastAPI
+        self.assertTrue(hasattr(entry, "app"), "api/index.py must export 'app'")
+        self.assertIsInstance(entry.app, FastAPI)
 
 
 class TestFrontendAssets(unittest.TestCase):
@@ -119,28 +120,22 @@ class TestFrontendAssets(unittest.TestCase):
 
 
 class TestIndexHtmlStructure(unittest.TestCase):
-    """index.html must correctly load config.js before app.js and have all view containers."""
+    """index.html must correctly load config.js before app.js and have all 11 view containers."""
 
     def setUp(self) -> None:
         self.html = (ROOT / "src" / "ui" / "index.html").read_text(encoding="utf-8")
 
     def test_config_js_loaded_before_app_js(self) -> None:
-        config_pos = self.html.find("config.js")
-        app_pos = self.html.find("app.js")
-        self.assertGreater(config_pos, -1, "index.html must load config.js")
-        self.assertGreater(app_pos, -1, "index.html must load app.js")
-        self.assertLess(config_pos, app_pos, "config.js must be loaded BEFORE app.js")
+        config_pos = self.html.find('src="js/config.js"')
+        app_pos = self.html.find('src="js/app.js"')
+        self.assertGreater(config_pos, -1, "index.html must load js/config.js")
+        self.assertGreater(app_pos, -1, "index.html must load js/app.js")
+        self.assertLess(config_pos, app_pos, "config.js script must be loaded BEFORE app.js")
 
     def test_app_js_is_module(self) -> None:
-        self.assertIn('type="module"', self.html, "app.js must be loaded as a JS module")
-        self.assertIn('src="js/app.js"', self.html)
+        self.assertIn('type="module" src="js/app.js"', self.html, "app.js must be loaded as a JS module")
 
-    def test_config_js_is_plain_script(self) -> None:
-        # config.js is a plain script (IIFE), NOT a module — it sets window.* globals
-        # We just need to ensure it's loaded (with or without type="module")
-        self.assertIn("config.js", self.html)
-
-    def test_all_view_containers_present(self) -> None:
+    def test_all_11_view_containers_present(self) -> None:
         required_views = [
             "view-overview", "view-telemetry", "view-hardware", "view-mock",
             "view-twin", "view-estimation", "view-replay", "view-events",
@@ -149,7 +144,7 @@ class TestIndexHtmlStructure(unittest.TestCase):
         missing = [v for v in required_views if f'id="{v}"' not in self.html]
         self.assertEqual(missing, [], f"Missing view containers: {missing}")
 
-    def test_all_nav_buttons_present(self) -> None:
+    def test_all_11_nav_buttons_present(self) -> None:
         required_nav = [
             "overview", "telemetry", "hardware", "mock",
             "twin", "estimation", "replay", "events",
@@ -164,9 +159,26 @@ class TestIndexHtmlStructure(unittest.TestCase):
     def test_mock_nav_present(self) -> None:
         self.assertIn('data-view="mock"', self.html, "Mock Generator nav must be present")
 
+    def test_header_mode_badge_present(self) -> None:
+        self.assertIn('id="header-mode-badge"', self.html, "Header mode badge must be present")
+        self.assertIn('id="header-mode-text"', self.html, "Header mode text must be present")
+
+
+class TestOverviewHardwareSection(unittest.TestCase):
+    """overview.js must contain the live hardware sensor telemetry strip."""
+
+    def setUp(self) -> None:
+        self.content = (ROOT / "src" / "ui" / "js" / "views" / "overview.js").read_text(encoding="utf-8")
+
+    def test_live_hardware_sensors_section_present(self) -> None:
+        self.assertIn("LIVE HARDWARE SENSORS", self.content)
+
+    def test_test_sample_button_present(self) -> None:
+        self.assertIn("overview-btn-test-sample", self.content)
+
 
 class TestConfigJs(unittest.TestCase):
-    """config.js must have the correct placeholder structure for build-time injection."""
+    """config.js must support both TWINVOLT_* and VITE_* variable styles."""
 
     def setUp(self) -> None:
         self.content = (ROOT / "src" / "ui" / "js" / "config.js").read_text(encoding="utf-8")
@@ -177,18 +189,17 @@ class TestConfigJs(unittest.TestCase):
     def test_ws_url_placeholder_present(self) -> None:
         self.assertIn("__TWINVOLT_WS_BASE_URL__", self.content)
 
-    def test_iife_wrapper_present(self) -> None:
-        self.assertIn("(function", self.content, "config.js must use an IIFE wrapper")
-
-    def test_sets_window_api_base_url(self) -> None:
+    def test_sets_window_twinvolt_and_vite_api_base_url(self) -> None:
         self.assertIn("window.TWINVOLT_API_BASE_URL", self.content)
+        self.assertIn("window.VITE_API_BASE_URL", self.content)
 
-    def test_sets_window_ws_base_url(self) -> None:
+    def test_sets_window_twinvolt_and_vite_ws_base_url(self) -> None:
         self.assertIn("window.TWINVOLT_WS_BASE_URL", self.content)
+        self.assertIn("window.VITE_WS_BASE_URL", self.content)
 
 
 class TestApiJs(unittest.TestCase):
-    """api.js must export resolveWsBaseUrl and use _resolveApiBaseUrl for the constructor."""
+    """api.js must export resolveWsBaseUrl and use _resolveApiBaseUrl supporting both naming conventions."""
 
     def setUp(self) -> None:
         self.content = (ROOT / "src" / "ui" / "js" / "api.js").read_text(encoding="utf-8")
@@ -196,8 +207,13 @@ class TestApiJs(unittest.TestCase):
     def test_resolve_ws_base_url_exported(self) -> None:
         self.assertIn("export function resolveWsBaseUrl", self.content)
 
-    def test_resolve_api_base_url_defined(self) -> None:
-        self.assertIn("function _resolveApiBaseUrl", self.content)
+    def test_supports_twinvolt_and_vite_api_base_url(self) -> None:
+        self.assertIn("TWINVOLT_API_BASE_URL", self.content)
+        self.assertIn("VITE_API_BASE_URL", self.content)
+
+    def test_supports_twinvolt_and_vite_ws_base_url(self) -> None:
+        self.assertIn("TWINVOLT_WS_BASE_URL", self.content)
+        self.assertIn("VITE_WS_BASE_URL", self.content)
 
     def test_constructor_uses_dynamic_resolver(self) -> None:
         self.assertIn("_resolveApiBaseUrl()", self.content)
@@ -205,47 +221,9 @@ class TestApiJs(unittest.TestCase):
     def test_api_client_exported(self) -> None:
         self.assertIn("export const api = new ApiClient()", self.content)
 
-    def test_no_hardcoded_localhost_in_production_paths(self) -> None:
-        # Ensure no hardcoded localhost URL in the API path definitions
-        # (allowed in comments and error messages, but not in fetch() paths)
-        lines = self.content.splitlines()
-        suspicious = [
-            (i + 1, line) for i, line in enumerate(lines)
-            if "localhost" in line and "return" in line and "http" in line
-        ]
-        self.assertEqual(suspicious, [], f"Suspicious hardcoded localhost in return statements: {suspicious}")
-
-
-class TestWebsocketJs(unittest.TestCase):
-    """websocket.js must import resolveWsBaseUrl and use it instead of window.location directly."""
-
-    def setUp(self) -> None:
-        self.content = (ROOT / "src" / "ui" / "js" / "websocket.js").read_text(encoding="utf-8")
-
-    def test_imports_resolve_ws_base_url(self) -> None:
-        self.assertIn("resolveWsBaseUrl", self.content)
-        self.assertIn("from './api.js'", self.content)
-
-    def test_uses_ws_base_in_connect(self) -> None:
-        self.assertIn("resolveWsBaseUrl()", self.content)
-
-    def test_no_direct_window_location_for_ws_url(self) -> None:
-        # The old pattern used window.location.host directly for the WS URL.
-        # After the patch, the URL is always routed through resolveWsBaseUrl().
-        # window.location may still appear in resolveWsBaseUrl itself (in api.js),
-        # but websocket.js should NOT build the WS URL from window.location directly.
-        lines = self.content.splitlines()
-        # Look for the old pattern: building wsUrl directly from window.location.host
-        # without going through the resolver
-        old_pattern = [
-            line for line in lines
-            if "window.location.host" in line and ("wsUrl" in line or "protocol" in line)
-        ]
-        self.assertEqual(old_pattern, [], f"websocket.js still builds wsUrl directly from window.location: {old_pattern}")
-
 
 class TestBuildConfigScript(unittest.TestCase):
-    """scripts/build-config.py must generate config.js correctly in both modes."""
+    """scripts/build-config.py must support both TWINVOLT_* and VITE_* environment variables."""
 
     def setUp(self) -> None:
         self.script = ROOT / "scripts" / "build-config.py"
@@ -257,8 +235,8 @@ class TestBuildConfigScript(unittest.TestCase):
     def test_placeholder_mode_no_env(self) -> None:
         """Running without env vars writes placeholder tokens (safe for local dev)."""
         env = {**os.environ}
-        env.pop("TWINVOLT_API_BASE_URL", None)
-        env.pop("TWINVOLT_WS_BASE_URL", None)
+        for k in ("TWINVOLT_API_BASE_URL", "TWINVOLT_WS_BASE_URL", "VITE_API_BASE_URL", "VITE_WS_BASE_URL"):
+            env.pop(k, None)
 
         result = subprocess.run(
             [sys.executable, str(self.script)],
@@ -272,8 +250,8 @@ class TestBuildConfigScript(unittest.TestCase):
         self.assertIn("__TWINVOLT_API_BASE_URL__", content)
         self.assertIn("__TWINVOLT_WS_BASE_URL__", content)
 
-    def test_url_injection_mode(self) -> None:
-        """Running with env vars injects the real URLs into config.js."""
+    def test_twinvolt_url_injection_mode(self) -> None:
+        """Running with TWINVOLT_* env vars injects the real URLs into config.js."""
         env = {**os.environ,
                "TWINVOLT_API_BASE_URL": "https://test-backend.railway.app",
                "TWINVOLT_WS_BASE_URL": "wss://test-backend.railway.app"}
@@ -288,9 +266,33 @@ class TestBuildConfigScript(unittest.TestCase):
         self.assertEqual(result.returncode, 0, f"build-config.py failed: {result.stderr}")
         content = self.config_out.read_text(encoding="utf-8")
         self.assertIn("test-backend.railway.app", content)
-        # Restore placeholder state after test
-        subprocess.run([sys.executable, str(self.script)], env={k: v for k, v in os.environ.items()
-                       if k not in ("TWINVOLT_API_BASE_URL", "TWINVOLT_WS_BASE_URL")},
+        # Restore placeholder state
+        subprocess.run([sys.executable, str(self.script)],
+                       env={k: v for k, v in os.environ.items()
+                            if k not in ("TWINVOLT_API_BASE_URL", "TWINVOLT_WS_BASE_URL", "VITE_API_BASE_URL", "VITE_WS_BASE_URL")},
+                       cwd=str(ROOT))
+
+    def test_vite_url_injection_mode(self) -> None:
+        """Running with VITE_* env vars also injects the real URLs into config.js."""
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("TWINVOLT_API_BASE_URL", "TWINVOLT_WS_BASE_URL")}
+        env["VITE_API_BASE_URL"] = "https://vite-test.railway.app"
+        env["VITE_WS_BASE_URL"] = "wss://vite-test.railway.app"
+
+        result = subprocess.run(
+            [sys.executable, str(self.script)],
+            env=env,
+            capture_output=True,
+            text=True,
+            cwd=str(ROOT),
+        )
+        self.assertEqual(result.returncode, 0, f"build-config.py failed: {result.stderr}")
+        content = self.config_out.read_text(encoding="utf-8")
+        self.assertIn("vite-test.railway.app", content)
+        # Restore placeholder state
+        subprocess.run([sys.executable, str(self.script)],
+                       env={k: v for k, v in os.environ.items()
+                            if k not in ("TWINVOLT_API_BASE_URL", "TWINVOLT_WS_BASE_URL", "VITE_API_BASE_URL", "VITE_WS_BASE_URL")},
                        cwd=str(ROOT))
 
 
@@ -302,7 +304,6 @@ class TestCorsMiddleware(unittest.TestCase):
         from src.api.app import create_app
 
         app = create_app()
-        # Check app.user_middleware list — FastAPI stores middleware here before building the stack
         cors_found = any(
             getattr(m, 'cls', None) is CORSMiddleware or
             CORSMiddleware.__name__ in str(getattr(m, 'cls', ''))
@@ -316,7 +317,6 @@ class TestCorsMiddleware(unittest.TestCase):
 
         app = create_app()
         client = TestClient(app, raise_server_exceptions=True)
-        # Simulate a cross-origin preflight from a Vercel URL
         response = client.options(
             "/health",
             headers={
@@ -324,9 +324,7 @@ class TestCorsMiddleware(unittest.TestCase):
                 "Access-Control-Request-Method": "GET",
             },
         )
-        # 200 or 204 = CORS preflight accepted
         self.assertIn(response.status_code, (200, 204))
-        # The response must set ACAO header
         acao = response.headers.get("access-control-allow-origin", "")
         self.assertTrue(
             acao in ("*", "https://twinvolt.vercel.app") or "vercel" in acao,

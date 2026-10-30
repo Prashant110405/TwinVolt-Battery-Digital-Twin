@@ -147,12 +147,17 @@ def create_app(
     app.include_router(firmware_router)
     app.include_router(mock_router)
 
-    # ── Static UI Files ────────────────────────────────────────────────────────
-    # Mounts the frontend SPA when running in local dev / Docker / systemd mode.
-    # In Vercel production the frontend is served directly by Vercel's CDN — these
-    # mounts are never reached and are harmlessly skipped if the ui/ dir is absent.
-    ui_dir = Path(__file__).resolve().parent.parent / "ui"
-    if ui_dir.is_dir():
+    # ── Static UI Files & Client-Side SPA Routes ─────────────────────────────
+    # Resolves UI static files across local dev, Docker, and Vercel layouts.
+    candidates = [
+        Path(__file__).resolve().parent.parent / "ui",
+        Path.cwd() / "src" / "ui",
+        Path.cwd() / "ui",
+        Path(__file__).resolve().parents[2] / "src" / "ui" if len(Path(__file__).resolve().parents) > 2 else Path.cwd() / "src" / "ui",
+    ]
+    ui_dir = next((p for p in candidates if (p / "index.html").is_file()), None)
+
+    if ui_dir is not None:
         app.mount("/ui", StaticFiles(directory=str(ui_dir), html=True), name="ui")
         if (ui_dir / "css").is_dir():
             app.mount("/css", StaticFiles(directory=str(ui_dir / "css")), name="css_static")
@@ -169,7 +174,28 @@ def create_app(
             return FileResponse(str(ui_dir / "index.html"))
 
         @app.get("/", include_in_schema=False)
+        @app.get("/index.html", include_in_schema=False)
         async def serve_root():
             return FileResponse(str(ui_dir / "index.html"))
+
+        # Client-side SPA navigation routes
+        spa_views = [
+            "overview",
+            "telemetry",
+            "hardware",
+            "mock",
+            "twin",
+            "estimation",
+            "replay",
+            "events",
+            "diagnostics",
+            "benchmarking",
+            "datasets",
+        ]
+        for view in spa_views:
+            @app.get(f"/{view}", include_in_schema=False)
+            @app.get(f"/ui/{view}", include_in_schema=False)
+            async def serve_spa_view():
+                return FileResponse(str(ui_dir / "index.html"))
 
     return app
