@@ -1,95 +1,124 @@
 /* ==============================================================================
    TwinVolt Universal Battery Digital Twin — CSS Design Tokens & Variables
-   Dark cyber-physical engineering workstation theme
+   Theme: Premium Light-Tech / Luxury Industrial Engineering Workstation
+   Palette: High-contrast, clean scientific surfaces with precise engineering blues
+   All legacy and modern CSS variable names preserved for 100% backward compatibility.
    ============================================================================== */
 
 :root {
-  /* Cool, low-glare industrial light theme */
-  --bg-primary: #f3f6fa;
-  --bg-secondary: #ffffff;
-  --bg-surface: #f7f9fc;
-  --bg-surface-hover: #eef3f9;
-  --bg-card: #ffffff;
-  --bg-card-hover: #fbfdff;
-  --bg-card-active: #edf5ff;
+  /* ── Surfaces & Backgrounds ────────────────────────────────────────────────── */
+  --bg-primary: #F7F9FC;           /* Main viewport and page background */
+  --bg-secondary: #FFFFFF;         /* Header, sidebar, secondary background */
+  --bg-surface: #FFFFFF;           /* Card and panel default surface */
+  --bg-surface-elevated: #FFFFFF;  /* Modals, floating dropdowns, popovers */
+  --bg-surface-hover: #F1F5F9;     /* Subtle interactive hover fill */
+  --bg-surface-active: #EBF3FC;    /* Active state fill */
+  --bg-card: #FFFFFF;              /* Primary card background */
+  --bg-card-hover: #FAFCFE;        /* Card hover surface */
+  --bg-card-active: #F0F6FD;       /* Card active surface */
+  --bg-input: #FFFFFF;             /* Form controls */
+  --bg-input-focus: #FFFFFF;       /* Focused inputs */
 
-  /* Borders & Glassmorphism */
-  --border-subtle: #e3e9f1;
-  --border-card: #e4eaf2;
-  --border-active: #b8d3f5;
-  --border-focus: #2563eb;
-  --glass-blur: blur(12px);
+  /* ── Borders & Glassmorphism ──────────────────────────────────────────────── */
+  --border-subtle: #E2E8F0;        /* Subtle component borders */
+  --border-card: #E2E8F0;          /* Card borders */
+  --border-active: #93C5FD;        /* Active/focused container border */
+  --border-focus: #1769D2;         /* Explicit focus ring border */
+  --border-divider: #EDF2F7;       /* Section dividers */
+  --glass-blur: blur(8px);         /* Restrained blur */
 
-  /* Primary & Accent Colors */
-  --color-primary: #2563eb;
-  --color-primary-glow: rgba(37, 99, 235, 0.12);
-  --color-cyan: #0f8f9a;
-  --color-blue: #2563eb;
-  --color-indigo: #5546c7;
-  --color-purple: #7653c6;
+  /* ── Primary & Accent Colors ──────────────────────────────────────────────── */
+  --color-primary: #1769D2;        /* Primary engineering blue */
+  --color-primary-hover: #1255AA;  /* Primary blue dark hover */
+  --color-primary-light: #EBF3FC;  /* Light tint for badges/fills */
+  --color-primary-glow: rgba(23, 105, 210, 0.12); /* Subtle restrained glow */
 
-  /* Semantic State Colors */
-  --color-success: #16865c;
-  --color-success-glow: rgba(16, 185, 129, 0.2);
-  --color-warning: #bd6b13;
-  --color-warning-glow: rgba(245, 158, 11, 0.2);
-  --color-danger: #c43f48;
-  --color-danger-glow: rgba(239, 68, 68, 0.2);
-  --color-info: #2563eb;
+  --color-blue: #1769D2;           /* Legacy alias */
+  --color-electric: #3188F5;       /* Electric blue accent for telemetry / graphs */
+  --color-cyan: #12A9C7;           /* Cyan accent for secondary telemetry traces */
+  --color-cyan-light: #E7F8FA;     /* Light cyan fill */
+  --color-indigo: #4F46E5;         /* Deep indigo for model parameters */
+  --color-purple: #7C3AED;         /* Analytical / diagnostics accent */
 
-  /* Typography Colors */
-  --text-primary: #17243a;
-  --text-secondary: #52627a;
-  --text-muted: #718096;
-  --text-dim: #8b98aa;
-  --text-accent: #2563eb;
+  /* ── Semantic State Colors ────────────────────────────────────────────────── */
+  --color-success: #15966B;        /* Nominal / nominal charge / connected */
+  --color-success-light: #E8F7F1;  /* Success background fill */
+  --color-success-glow: rgba(21, 150, 107, 0.14);
 
-  /* Typography Fonts */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  --color-warning: #D99525;        /* Thermal / rate limit warnings */
+  --color-warning-light: #FEF8EC;  /* Warning background fill */
+  --color-warning-glow: rgba(217, 149, 37, 0.14);
+
+  --color-danger: #D84C4C;         /* Fault / anomaly / overcurrent */
+  --color-danger-light: #FDEDEC;   /* Danger background fill */
+  --color-danger-glow: rgba(216, 76, 76, 0.14);
+
+  --color-info: #1769D2;           /* Neutral status info */
+  --color-info-light: #EBF3FC;     /* Info background fill */
+
+  /* ── Typography Colors ────────────────────────────────────────────────────── */
+  --text-primary: #14243A;         /* High-contrast dark slate body */
+  --text-secondary: #65758B;       /* Medium slate for secondary labels */
+  --text-muted: #8E9BAE;           /* Muted text, timestamps, units */
+  --text-dim: #A8B4C4;             /* Inactive placeholders */
+  --text-accent: #1769D2;          /* Linked/highlighted text */
+  --text-inverse: #FFFFFF;         /* Inverted text on solid dark/blue */
+
+  /* ── Typography Fonts ─────────────────────────────────────────────────────── */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
   --font-display: 'Outfit', 'Inter', -apple-system, sans-serif;
 
-  /* Font Sizes */
+  /* ── Font Sizes ───────────────────────────────────────────────────────────── */
   --text-xs: 0.75rem;     /* 12px */
   --text-sm: 0.875rem;    /* 14px */
-  --text-base: 1.0rem;     /* 16px */
+  --text-base: 1.0rem;    /* 16px */
   --text-lg: 1.125rem;    /* 18px */
   --text-xl: 1.25rem;     /* 20px */
   --text-2xl: 1.5rem;     /* 24px */
   --text-3xl: 1.875rem;   /* 30px */
   --text-4xl: 2.25rem;    /* 36px */
 
-  /* Spacing */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1.0rem;
-  --space-5: 1.25rem;
-  --space-6: 1.5rem;
-  --space-8: 2.0rem;
-  --space-10: 2.5rem;
-  --space-12: 3.0rem;
+  /* ── Font Weights ─────────────────────────────────────────────────────────── */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
 
-  /* Radii */
+  /* ── Spacing ──────────────────────────────────────────────────────────────── */
+  --space-1: 0.25rem;     /* 4px */
+  --space-2: 0.5rem;      /* 8px */
+  --space-3: 0.75rem;     /* 12px */
+  --space-4: 1.0rem;      /* 16px */
+  --space-5: 1.25rem;     /* 20px */
+  --space-6: 1.5rem;      /* 24px */
+  --space-8: 2.0rem;      /* 32px */
+  --space-10: 2.5rem;     /* 40px */
+  --space-12: 3.0rem;     /* 48px */
+  --space-16: 4.0rem;     /* 64px */
+
+  /* ── Radii ────────────────────────────────────────────────────────────────── */
   --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 18px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(24, 39, 62, 0.04);
-  --shadow-md: 0 6px 18px rgba(24, 39, 62, 0.06);
-  --shadow-lg: 0 12px 30px rgba(24, 39, 62, 0.1);
-  --shadow-glow: 0 0 15px var(--color-primary-glow);
+  /* ── Shadows (Restrained, subtle industrial elevations) ───────────────────── */
+  --shadow-sm: 0 1px 3px rgba(20, 36, 58, 0.05);
+  --shadow-md: 0 4px 12px rgba(20, 36, 58, 0.06), 0 1px 2px rgba(20, 36, 58, 0.04);
+  --shadow-lg: 0 10px 25px rgba(20, 36, 58, 0.08), 0 2px 6px rgba(20, 36, 58, 0.04);
+  --shadow-glow: 0 0 16px var(--color-primary-glow);
+  --shadow-inset: inset 0 1px 2px rgba(20, 36, 58, 0.06);
 
-  /* Transitions */
+  /* ── Transitions ──────────────────────────────────────────────────────────── */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Layout Dimensions */
+  /* ── Layout Dimensions ────────────────────────────────────────────────────── */
   --header-height: 64px;
   --sidebar-width: 240px;
   --sidebar-collapsed-width: 68px;
+  --max-content-width: 1440px;
 }

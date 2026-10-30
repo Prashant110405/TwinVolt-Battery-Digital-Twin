@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="TwinVolt — Universal Battery Digital Twin Platform for real-time telemetry, state estimation, ECM modelling, and explainable diagnostics." />
+  <title>TwinVolt — Universal Battery Digital Twin Platform</title>
+
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/landing.css" />
+</head>
+<body class="landing-body">
+
+  <!-- ── Section 1: Navigation Header ─────────────────────────────────────────── -->
+  <header class="landing-nav">
+    <div class="landing-container landing-nav-inner">
+      <a href="landing.html" class="landing-brand">
+        <img src="assets/logo.svg" alt="TwinVolt Logo" class="landing-brand-logo" />
+        <span class="landing-brand-title">TwinVolt</span>
+        <span class="landing-brand-badge">Universal Platform</span>
+      </a>
+
+      <nav aria-label="Main Navigation">
+        <ul class="landing-links">
+          <li><a href="#overview" class="landing-link">Platform</a></li>
+          <li><a href="#capabilities" class="landing-link">Capabilities</a></li>
+          <li><a href="#architecture" class="landing-link">Architecture</a></li>
+          <li><a href="#hardware" class="landing-link">Hardware</a></li>
+          <li><a href="#preview" class="landing-link">Dashboard</a></li>
+          <li><a href="/docs" class="landing-link" target="_blank" rel="noopener">API Docs</a></li>
+        </ul>
+      </nav>
+
+      <div class="landing-nav-actions">
+        <a href="/" class="landing-btn-primary">
+          <span>Open Dashboard</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ── Section 2: Hero ──────────────────────────────────────────────────────── -->
+    <section class="landing-hero">
+      <div class="landing-container landing-hero-grid">
+        <div class="hero-content">
+          <div class="hero-tag">
+            <span class="hero-tag-pulse"></span>
+            <span>Real-Time Cyber-Physical Twin</span>
+          </div>
+          <h1 class="landing-hero-title">The Intelligence Behind Every Battery.</h1>
+          <p class="landing-hero-desc">
+            A universal battery digital twin platform for real-time telemetry, equivalent circuit modelling, Kalman-filter state estimation, and intelligent diagnostics.
+          </p>
+          <div class="landing-hero-actions">
+            <a href="/" class="landing-btn-primary">
+              <span>Open TwinVolt Dashboard</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </a>
+            <a href="#overview" class="landing-btn-secondary">
+              <span>Explore Platform</span>
+            </a>
+          </div>
+
+          <div class="hero-specs-row">
+            <div class="hero-spec-item">
+              <span class="hero-spec-val">100 Hz</span>
+              <span class="hero-spec-lbl">Telemetry Pipeline</span>
+            </div>
+            <div class="hero-spec-item">
+              <span class="hero-spec-val">&lt; 20 mV</span>
+              <span class="hero-spec-lbl">ECM Residual Target</span>
+            </div>
+            <div class="hero-spec-item">
+              <span class="hero-spec-val">Universal</span>
+              <span class="hero-spec-lbl">Chemistry Agnostic</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="hero-canvas-card">
+            <div class="hero-canvas-container">
+              <!-- Isometric Canvas Visualization -->
+              <canvas id="battery-3d-canvas" aria-label="Isometric Battery Pack Module Visualization"></canvas>
+              <!-- High-Fidelity Static Fallback -->
+              <div id="battery-fallback" class="hero-canvas-fallback">
+                <svg class="battery-schematic-svg" viewBox="0 0 200 160" fill="none" stroke="#1769D2" stroke-width="2">
+                  <rect x="30" y="30" width="140" height="100" rx="8" fill="#F8FAFC" />
+                  <rect x="80" y="15" width="40" height="15" rx="3" fill="#E2E8F0" />
+                  <path d="M50 70h30M120 70h30M70 50v40M130 50v40" stroke="#3188F5" stroke-width="3" />
+                  <circle cx="100" cy="80" r="16" fill="#EBF3FC" stroke="#1769D2" />
+                </svg>
+              </div>
+            </div>
+            <div class="hero-canvas-overlay">
+              <span class="canvas-live-tag">
+                <span class="canvas-live-dot"></span>
+                <span>Active Model: 1RC / 2RC Thévenin</span>
+              </span>
+              <span class="canvas-live-tag">
+                <span>Multi-Cell Series/Parallel</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section 3: Platform Overview ─────────────────────────────────────────── -->
+    <section id="overview" class="landing-section landing-section-alt">
+      <div class="landing-container">
+        <div class="section-header">
+          <p class="section-eyebrow">Platform Overview</p>
+          <h2 class="section-title">Universal &amp; Chemistry-Agnostic</h2>
+          <p class="section-desc">
+            TwinVolt decouples battery physics and estimation algorithms from hardware variations. Whether monitoring Li-ion (NMC, LFP) packs, solid-state cells, or custom prototypes, TwinVolt synchronizes real-time sensor streams with state-space models.
+          </p>
+        </div>
+
+        <div class="landing-features-grid">
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+            </div>
+            <h3 class="feature-title">Equivalent Circuit Models</h3>
+            <p class="feature-desc">Continuous parameter calibration with multi-pair RC Thévenin models to represent polarization and open-circuit voltage dynamics.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            </div>
+            <h3 class="feature-title">Dual State Estimation</h3>
+            <p class="feature-desc">Extended Kalman Filtering (EKF) operating alongside Coulomb Counting with drift compensation and covariance propagation.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </div>
+            <h3 class="feature-title">Explainable Diagnostics</h3>
+            <p class="feature-desc">Evidence-based Bayesian fault hypotheses identifying thermal runaway risk, overcharge, dendrite growth, and sensor disconnects.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section 4: Core Capabilities ─────────────────────────────────────────── -->
+    <section id="capabilities" class="landing-section">
+      <div class="landing-container">
+        <div class="section-header">
+          <p class="section-eyebrow">Capabilities</p>
+          <h2 class="section-title">Engineered for Battery Systems</h2>
+          <p class="section-desc">Full lifecycle validation across simulation, laboratory benchmarks, and real hardware deployment.</p>
+        </div>
+
+        <div class="landing-features-grid">
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
+            </div>
+            <h3 class="feature-title">Mock Telemetry &amp; Faults</h3>
+            <p class="feature-desc">Inject synthetic drive cycles, sinusoidal current surges, and calibrated thermal anomalies directly into the pipeline.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            </div>
+            <h3 class="feature-title">Replay &amp; Evaluation</h3>
+            <p class="feature-desc">Playback recorded battery test cycles with sub-millisecond precision to validate estimator response against ground truth.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+            </div>
+            <h3 class="feature-title">Experimental Benchmarking</h3>
+            <p class="feature-desc">Automated RMSE voltage/temperature evaluation against empirical laboratory data with statistical stratification.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section 5: Architecture ─────────────────────────────────────────────── -->
+    <section id="architecture" class="landing-section landing-section-alt">
+      <div class="landing-container">
+        <div class="section-header">
+          <p class="section-eyebrow">System Architecture</p>
+          <h2 class="section-title">End-to-End Cyber-Physical Flow</h2>
+          <p class="section-desc">Robust separation of physical telemetry ingestion, state-space estimation, and real-time visualization.</p>
+        </div>
+
+        <div class="arch-flow-container">
+          <div class="arch-node">
+            <span class="arch-node-badge">LAYER 1</span>
+            <h4 class="arch-node-title">Physical Sensors</h4>
+            <p class="arch-node-sub">USB Serial, BLE, BMS, Influx / Edge Daemon</p>
+          </div>
+
+          <span class="arch-arrow">→</span>
+
+          <div class="arch-node">
+            <span class="arch-node-badge">LAYER 2</span>
+            <h4 class="arch-node-title">Telemetry Ingestion</h4>
+            <p class="arch-node-sub">Framing, CRC, Gating &amp; Resampling</p>
+          </div>
+
+          <span class="arch-arrow">→</span>
+
+          <div class="arch-node">
+            <span class="arch-node-badge">LAYER 3</span>
+            <h4 class="arch-node-title">State Estimation</h4>
+            <p class="arch-node-sub">EKF, SoC / SoH, ECM 2RC Thévenin</p>
+          </div>
+
+          <span class="arch-arrow">→</span>
+
+          <div class="arch-node">
+            <span class="arch-node-badge">LAYER 4</span>
+            <h4 class="arch-node-title">Digital Twin Runtime</h4>
+            <p class="arch-node-sub">Bayesian Diagnostics &amp; Anomaly Event Bus</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section 6: Hardware Compatibility ──────────────────────────────────── -->
+    <section id="hardware" class="landing-section">
+      <div class="landing-container">
+        <div class="section-header">
+          <p class="section-eyebrow">Hardware Interfacing</p>
+          <h2 class="section-title">Direct Browser &amp; Edge Integration</h2>
+          <p class="section-desc">Direct peer-to-peer browser connectivity via modern Web standards without cloud middleware delays.</p>
+        </div>
+
+        <div class="hardware-cards-grid">
+          <div class="hw-card">
+            <span class="hw-badge hw-badge-live">Browser Direct</span>
+            <h3 class="hw-title">Web Serial API</h3>
+            <p class="hw-desc">Direct USB communication with Arduino, ESP32, and custom BMS hardware at up to 115,200 baud directly inside modern browsers.</p>
+          </div>
+
+          <div class="hw-card">
+            <span class="hw-badge hw-badge-live">Browser Direct</span>
+            <h3 class="hw-title">Web Bluetooth (BLE)</h3>
+            <p class="hw-desc">Wireless GATT profile telemetry connection for mobile battery packs, portable instrumentation, and drone test rigs.</p>
+          </div>
+
+          <div class="hw-card">
+            <span class="hw-badge hw-badge-gateway">Edge Daemon</span>
+            <h3 class="hw-title">TCP / UDP &amp; CAN Gateway</h3>
+            <p class="hw-desc">Background telemetry daemon support for industrial CAN-bus networks, hardware test-benches, and networked battery cabinets.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section 7: Dashboard Preview ───────────────────────────────────────── -->
+    <section id="preview" class="landing-section landing-section-alt">
+      <div class="landing-container">
+        <div class="section-header">
+          <p class="section-eyebrow">Operator Dashboard</p>
+          <h2 class="section-title">Engineered for Rapid Diagnosis</h2>
+          <p class="section-desc">An 11-view engineering dashboard designed for battery researchers, test engineers, and pack designers.</p>
+        </div>
+
+        <div class="dashboard-preview-card">
+          <div class="dashboard-preview-header">
+            <div class="preview-controls-dots">
+              <span class="preview-dot"></span>
+              <span class="preview-dot"></span>
+              <span class="preview-dot"></span>
+            </div>
+            <span class="preview-pill-url">twinvolt.internal / dashboard / overview</span>
+            <span class="hw-badge hw-badge-live" style="margin: 0;">LIVE CONNECTED</span>
+          </div>
+
+          <div class="dashboard-preview-content">
+            <div class="preview-telemetry-box">
+              <h4 style="font-size: var(--text-sm); font-weight: 700; margin-bottom: 8px;">Real-Time Sensor Feed</h4>
+              <p style="font-size: var(--text-xs); color: var(--text-secondary);">High-frequency voltage, current, and cell temperature streaming with continuous Kalman state correction.</p>
+            </div>
+            <div class="preview-twin-box">
+              <h4 style="font-size: var(--text-sm); font-weight: 700; margin-bottom: 8px;">State-of-Charge</h4>
+              <p style="font-size: var(--text-xs); color: var(--text-secondary);">Real-time comparison between EKF and Coulomb Counting estimators.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section 8: Final CTA ───────────────────────────────────────────────── -->
+    <section class="landing-cta-section">
+      <div class="landing-container landing-cta-box">
+        <h2 class="section-title">Explore Your Battery's Digital Twin.</h2>
+        <p class="section-desc" style="margin-bottom: var(--space-6);">
+          Launch the fully operational TwinVolt engineering dashboard now to inspect live telemetry, tune model parameters, or inject fault scenarios.
+        </p>
+        <a href="/" class="landing-btn-primary" style="padding: 14px 28px; font-size: var(--text-base);">
+          <span>Open TwinVolt Dashboard</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <!-- ── Section 9: Footer ──────────────────────────────────────────────────── -->
+  <footer class="landing-footer">
+    <div class="landing-container">
+      <div class="landing-footer-grid">
+        <div class="landing-footer-brand">
+          <img src="assets/logo.svg" alt="TwinVolt Logo" style="width: 24px; height: 24px;" />
+          <strong style="font-size: var(--text-base); color: var(--text-primary);">TwinVolt</strong>
+          <span style="font-size: var(--text-xs); color: var(--text-muted); margin-left: 8px;">Universal Battery Digital Twin</span>
+        </div>
+        <ul class="landing-footer-links">
+          <li><a href="/" class="landing-link">Dashboard</a></li>
+          <li><a href="/docs" class="landing-link" target="_blank" rel="noopener">API Docs</a></li>
+          <li><a href="/redoc" class="landing-link" target="_blank" rel="noopener">ReDoc</a></li>
+        </ul>
+      </div>
+      <div class="landing-footer-copy">
+        &copy; 2026 TwinVolt Platform. Engineered for Universal Battery Digital Twins.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Interactive 3D Visualizer Script -->
+  <script src="js/landing.js"></script>
+</body>
+</html>

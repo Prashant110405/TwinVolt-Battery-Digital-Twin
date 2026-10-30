@@ -59,13 +59,13 @@
   position: absolute;
   top: var(--space-2);
   right: var(--space-2);
-  background: rgba(13, 18, 31, 0.85);
-  backdrop-filter: var(--glass-blur);
+  background: #FFFFFF;
   border: 1px solid var(--border-subtle);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  color: var(--text-secondary);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
   pointer-events: none;
 }
