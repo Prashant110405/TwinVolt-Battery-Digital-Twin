@@ -448,6 +448,7 @@ class DigitalTwinInstance:
             self._event_bus.publish(
                 TwinSynchronizedEvent(
                     twin_record=twin_record,
+                    sync_output=sync_output,
                     source_id=snapshot.system_id,
                     timestamp_ns=snapshot.timestamp_ns,
                 )

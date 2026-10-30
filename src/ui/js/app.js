@@ -10,11 +10,14 @@ import { DiagnosticsView } from './views/diagnostics.js';
 import { DatasetLabView } from './views/dataset_lab.js';
 import { EstimationView } from './views/estimation.js';
 import { EventsView } from './views/events.js';
+import { HardwareView } from './views/hardware.js';
+import { MockView } from './views/mock.js';
 import { OverviewView } from './views/overview.js';
 import { ReplayView } from './views/replay.js';
 import { TelemetryView } from './views/telemetry.js';
 import { TwinView } from './views/twin.js';
 import { wsClient } from './websocket.js';
+import { bleManager } from './ble.js';
 
 class TwinVoltApp {
   constructor() {
@@ -49,6 +52,8 @@ class TwinVoltApp {
     const viewContainers = {
       overview: document.getElementById('view-overview'),
       telemetry: document.getElementById('view-telemetry'),
+      hardware: document.getElementById('view-hardware'),
+      mock: document.getElementById('view-mock'),
       twin: document.getElementById('view-twin'),
       estimation: document.getElementById('view-estimation'),
       replay: document.getElementById('view-replay'),
@@ -60,6 +65,8 @@ class TwinVoltApp {
 
     if (viewContainers.overview) this.views.overview = new OverviewView(viewContainers.overview);
     if (viewContainers.telemetry) this.views.telemetry = new TelemetryView(viewContainers.telemetry);
+    if (viewContainers.hardware) this.views.hardware = new HardwareView(viewContainers.hardware);
+    if (viewContainers.mock) this.views.mock = new MockView(viewContainers.mock);
     if (viewContainers.twin) this.views.twin = new TwinView(viewContainers.twin);
     if (viewContainers.estimation) this.views.estimation = new EstimationView(viewContainers.estimation);
     if (viewContainers.replay) this.views.replay = new ReplayView(viewContainers.replay);
@@ -95,6 +102,10 @@ class TwinVoltApp {
   switchView(viewName) {
     if (!this.views[viewName]) return;
 
+    if (this.currentView && this.views[this.currentView] && typeof this.views[this.currentView].unmount === 'function') {
+      this.views[this.currentView].unmount();
+    }
+
     // Update Nav Buttons
     document.querySelectorAll('.nav-item-btn').forEach((btn) => {
       if (btn.getAttribute('data-view') === viewName) {
@@ -117,6 +128,9 @@ class TwinVoltApp {
     }
 
     this.currentView = viewName;
+    if (this.views[viewName] && typeof this.views[viewName].mount === 'function') {
+      this.views[viewName].mount();
+    }
   }
 
   async _syncInitialData() {
@@ -172,6 +186,16 @@ class TwinVoltApp {
   }
 
   _handleStateChange(changeType, appState, payload) {
+    // 0. Update Mode Badge
+    const modeBadge = document.getElementById('header-mode-badge');
+    const modeText = document.getElementById('header-mode-text');
+    if (modeBadge && modeText) {
+      const mode = (appState.activeMode || 'LIVE').toUpperCase();
+      const transportLabel = appState.activeTransport === 'BLE' ? ' [BLE]' : '';
+      modeText.textContent = `${mode} MODE${transportLabel}`;
+      modeBadge.className = `mode-pill mode-${mode.toLowerCase()}`;
+    }
+
     // 1. Update Header Elements
     const statusPill = document.getElementById('header-ws-status');
     const latencyEl = document.getElementById('header-latency');

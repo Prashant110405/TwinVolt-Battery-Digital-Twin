@@ -26,8 +26,91 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        pip install pytest pytest-cov
+        pip install pytest pytest-cov httpx pytest-asyncio
 
     - name: Run tests with pytest
       run: |
         pytest -v
+
+  frontend-check:
+    name: Frontend Syntax & Deployment Config Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js (for syntax checking)
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Verify vercel.json is valid JSON
+      run: |
+        python -c "import json; json.load(open('vercel.json')); print('vercel.json: valid JSON')"
+
+    - name: Verify outputDirectory exists and contains index.html
+      run: |
+        test -f src/ui/index.html && echo "src/ui/index.html: found" || (echo "ERROR: src/ui/index.html missing!" && exit 1)
+
+    - name: Verify all JavaScript module imports resolve
+      run: |
+        echo "Checking JS module graph..."
+        FILES=(
+          src/ui/js/app.js
+          src/ui/js/api.js
+          src/ui/js/websocket.js
+          src/ui/js/state.js
+          src/ui/js/ble.js
+          src/ui/js/serial.js
+          src/ui/js/telemetry_pipeline.js
+          src/ui/js/config.js
+          src/ui/js/views/hardware.js
+          src/ui/js/views/mock.js
+          src/ui/js/views/overview.js
+          src/ui/js/views/telemetry.js
+          src/ui/js/views/twin.js
+          src/ui/js/views/estimation.js
+          src/ui/js/views/replay.js
+          src/ui/js/views/events.js
+          src/ui/js/views/diagnostics.js
+          src/ui/js/views/benchmarking.js
+          src/ui/js/views/dataset_lab.js
+        )
+        MISSING=0
+        for f in "${FILES[@]}"; do
+          if [ ! -f "$f" ]; then
+            echo "MISSING: $f"
+            MISSING=1
+          else
+            echo "OK: $f"
+          fi
+        done
+        if [ $MISSING -ne 0 ]; then exit 1; fi
+
+    - name: Check CSS assets exist
+      run: |
+        for f in src/ui/css/variables.css src/ui/css/layout.css src/ui/css/components.css src/ui/css/charts.css; do
+          test -f "$f" && echo "OK: $f" || (echo "MISSING: $f" && exit 1)
+        done
+
+    - name: Verify config.js placeholder structure
+      run: |
+        grep -q "TWINVOLT_API_BASE_URL" src/ui/js/config.js && echo "config.js: API URL token present"
+        grep -q "TWINVOLT_WS_BASE_URL"  src/ui/js/config.js && echo "config.js: WS URL token present"
+
+    - name: Verify api.js has resolveWsBaseUrl export
+      run: |
+        grep -q "export function resolveWsBaseUrl" src/ui/js/api.js && echo "api.js: resolveWsBaseUrl export found"
+        grep -q "_resolveApiBaseUrl" src/ui/js/api.js && echo "api.js: _resolveApiBaseUrl resolver found"
+
+    - name: Run build-config.py (no-op / placeholder mode)
+      run: |
+        python scripts/build-config.py
+        echo "build-config.py: ran successfully"
+
+    - name: Run build-config.py with actual backend URLs
+      run: |
+        TWINVOLT_API_BASE_URL="https://example-backend.railway.app" \
+        TWINVOLT_WS_BASE_URL="wss://example-backend.railway.app" \
+        python scripts/build-config.py
+        grep -q "example-backend.railway.app" src/ui/js/config.js && echo "build-config.py: URL injection verified"

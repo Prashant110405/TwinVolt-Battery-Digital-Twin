@@ -64,10 +64,140 @@ class AppState {
     this.events = []; // max 100 domain events
     this.maxEvents = 100;
 
-    // Replay State
-    this.activeMode = 'LIVE'; // LIVE, REPLAY
+    // Replay & Hardware Mode State
+    this.activeMode = 'IDLE'; // IDLE, LIVE, MOCK, REPLAY
+    this.hardwareStatus = null;
+    this.mockStatus = null;
     this.lastReplayResult = null;
     this.isReplaying = false;
+
+    // Dual-Transport Hardware State (USB Serial vs Bluetooth BLE)
+    this.activeTransport = 'SERIAL'; // 'SERIAL' | 'BLE'
+    this.usbStatus = {
+      state: 'DISCONNECTED', // DISCONNECTED, CONNECTING, CONNECTED_NO_DATA, STREAMING, STALE, ERROR
+      portName: null,
+      baudRate: 115200,
+      framesReceived: 0,
+      validFrames: 0,
+      parseErrors: 0,
+      sampleRateHz: 0.0,
+      lastReceivedTimestampMs: null,
+      lastError: null,
+    };
+    this.bleStatus = {
+      state: 'DISCONNECTED', // DISCONNECTED, CONNECTING, CONNECTED_NO_DATA, STREAMING, STALE, ERROR
+      deviceName: null,
+      deviceId: null,
+      serviceUuid: null,
+      notificationsReceived: 0,
+      parseErrors: 0,
+      sampleRateHz: 0.0,
+      lastReceivedTimestampMs: null,
+      lastValidReading: null,
+      lastError: null,
+    };
+    this.hardwareState = 'DISCONNECTED';
+    this.latestHardwareReading = null;
+  }
+
+  setActiveTransport(transport) {
+    this.activeTransport = transport;
+    this.notify('TRANSPORT_CHANGED', { transport });
+  }
+
+  setHardwareTelemetry(record) {
+    this.latestHardwareReading = record;
+    this.hardwareState = 'STREAMING';
+    this.activeMode = 'LIVE';
+
+    // Append to timeSeries buffer for real-time charting
+    const t = record.timestamp_ms / 1000;
+    this.timeSeries.push(t, {
+      meas_v: record.voltage_v,
+      meas_i: record.current_a,
+      meas_p: record.power_w,
+      temp_c: record.temperature_c,
+      meas_t: record.temperature_c,
+      sim_soc: record.soc_percent,
+      est_soc: record.soc_percent,
+    });
+
+    this.notify('HARDWARE_TELEMETRY', { record });
+  }
+
+  updateHardwareState({ transport, state, ...extra }) {
+    if (transport === 'usb') {
+      this.usbStatus = { ...this.usbStatus, state, ...extra };
+      this.notify('USB_STATUS', { usbStatus: this.usbStatus });
+    } else if (transport === 'ble') {
+      this.bleStatus = { ...this.bleStatus, state, ...extra };
+      this.notify('BLE_STATUS', { bleStatus: this.bleStatus });
+    }
+
+    // Determine aggregate hardware state based on active transport
+    // activeTransport is 'SERIAL' or 'BLE'; transport keys are 'usb' or 'ble'
+    const isBlActive = this.activeTransport === 'BLE';
+    const currentActiveState = isBlActive ? this.bleStatus.state : this.usbStatus.state;
+    this.hardwareState = currentActiveState;
+    if (this.hardwareState === 'STREAMING') {
+      this.activeMode = 'LIVE';
+    } else if (['DISCONNECTED', 'ERROR'].includes(this.hardwareState) && this.activeMode === 'LIVE') {
+      this.activeMode = 'IDLE';
+    }
+
+    this.notify('HARDWARE_STATE', {
+      hardwareState: this.hardwareState,
+      activeTransport: this.activeTransport,
+      usbStatus: this.usbStatus,
+      bleStatus: this.bleStatus,
+    });
+  }
+
+  setBleStatus(status) {
+    this.bleStatus = { ...this.bleStatus, ...status };
+    this.updateHardwareState({ transport: 'ble', state: status.state || this.bleStatus.state, ...status });
+  }
+
+  setHardwareStatus(status) {
+    this.hardwareStatus = status;
+    if (status) {
+      const mappedState = status.state === 'CONNECTED'
+        ? (status.frames_received > 0 ? 'STREAMING' : 'CONNECTED_NO_DATA')
+        : (status.state === 'DISCONNECTED' ? 'DISCONNECTED' : status.state);
+
+      this.updateHardwareState({
+        transport: 'usb',
+        state: mappedState,
+        portName: status.port,
+        baudRate: status.baud_rate,
+        framesReceived: status.frames_received || 0,
+        sampleRateHz: status.sample_rate_hz || 0.0,
+        lastError: status.last_error,
+      });
+
+      if (status.last_valid_reading) {
+        this.latestHardwareReading = {
+          transport: 'GATEWAY_SERIAL',
+          sourceBadge: 'REAL HARDWARE — USB',
+          voltage_v: status.last_valid_reading.voltage_v,
+          current_a: status.last_valid_reading.current_a,
+          power_w: status.last_valid_reading.power_w,
+          temperature_c: status.last_valid_reading.temperature_c,
+          soc_percent: status.last_valid_reading.soc_fraction ? status.last_valid_reading.soc_fraction * 100 : null,
+          receivedAt: Date.now(),
+          isStale: false,
+        };
+      }
+    }
+    this.notify('HARDWARE_STATUS', { hardwareStatus: status });
+  }
+
+  setMockStatus(status) {
+    this.mockStatus = status;
+    if (status && status.is_running) {
+      this.activeMode = 'MOCK';
+    }
+    this.notify('MOCK_STATUS', { mockStatus: status });
   }
 
   subscribe(listener) {
@@ -147,6 +277,9 @@ class AppState {
 
     // Push into time-series buffer
     const t = stateMsg.timestamp_ns / 1e9;
+    const measV = Number.isFinite(stateMsg.diagnostics?.telemetry_voltage_v) ? stateMsg.diagnostics.telemetry_voltage_v : null;
+    const measI = Number.isFinite(stateMsg.diagnostics?.telemetry_current_a) ? stateMsg.diagnostics.telemetry_current_a : null;
+    const measP = (measV !== null && measI !== null) ? Number((measV * measI).toFixed(3)) : null;
 
     this.timeSeries.push(t, {
       model_v: stateMsg.terminal_voltage_v,
@@ -155,8 +288,9 @@ class AppState {
       temp_c: stateMsg.temperature_c,
       v_res: Number.isFinite(stateMsg.voltage_residual_v) ? stateMsg.voltage_residual_v : null,
       t_res: Number.isFinite(stateMsg.temperature_residual_c) ? stateMsg.temperature_residual_c : null,
-      meas_v: Number.isFinite(stateMsg.diagnostics?.telemetry_voltage_v) ? stateMsg.diagnostics.telemetry_voltage_v : null,
-      meas_i: Number.isFinite(stateMsg.diagnostics?.telemetry_current_a) ? stateMsg.diagnostics.telemetry_current_a : null,
+      meas_v: measV,
+      meas_i: measI,
+      meas_p: measP,
     });
 
     this.notify('STATE_UPDATED', { state: stateMsg });

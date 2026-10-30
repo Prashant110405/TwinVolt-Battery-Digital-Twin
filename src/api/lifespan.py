@@ -63,19 +63,27 @@ def create_lifespan(settings: Optional[AppSettings] = None):
             except Exception as exc:
                 logger.warning("Failed to seed default battery profiles: %s", exc)
 
-        # 4. Seed demonstration benchmark datasets
-        if app_settings.seed_defaults and hasattr(app.state, "services") and app.state.services is not None:
-            try:
-                from src.runtime.seeder import seed_benchmark_datasets
-                seed_benchmark_datasets(app.state.services)
-            except Exception as exc:
-                logger.warning("Failed to seed benchmark datasets: %s", exc)
-
         try:
             yield
         finally:
             # 3. Graceful Shutdown
             logger.info("Shutting down TwinVolt Edge Server...")
+
+            arduino_mgr = getattr(app.state, "arduino_manager", None)
+            if arduino_mgr is not None and arduino_mgr.is_connected:
+                logger.info("Stopping ArduinoConnectionManager...")
+                try:
+                    await arduino_mgr.disconnect()
+                except Exception as exc:
+                    logger.error("Error stopping ArduinoConnectionManager: %s", exc)
+
+            mock_svc = getattr(app.state, "mock_service", None)
+            if mock_svc is not None and mock_svc.is_running:
+                logger.info("Stopping MockTelemetryService...")
+                try:
+                    await mock_svc.stop()
+                except Exception as exc:
+                    logger.error("Error stopping MockTelemetryService: %s", exc)
 
             if gateway_mgr is not None and gateway_mgr.is_running:
                 logger.info("Stopping GatewayDaemonManager and releasing transport sockets...")

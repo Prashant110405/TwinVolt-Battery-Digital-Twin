@@ -78,6 +78,7 @@ class TwinSynchronizedEvent(TwinEvent):
     """Published when the Digital Twin co-simulation engine completes a synchronization step with residuals."""
 
     twin_record: Optional[TwinStateRecord] = None
+    sync_output: Optional[Any] = None
     event_type: str = "twin.synchronized"
 
     @property

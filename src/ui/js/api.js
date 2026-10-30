@@ -1,10 +1,65 @@
 /**
  * Thin HTTP REST Client for TwinVolt API
  * Communicates strictly through verified Subtask 4.2 endpoints.
+ *
+ * BASE URL RESOLUTION (priority order):
+ *  1. window.TWINVOLT_API_BASE_URL — set by config.js injected in index.html for
+ *     Vercel / production deployments where the backend runs on a separate host.
+ *  2. Empty string '' — relative URLs, works when FastAPI serves the UI directly
+ *     (local dev with `python -m src.server`, Docker, systemd).
+ *
+ * HOW TO CONFIGURE FOR PRODUCTION (Vercel + separate backend):
+ *  a) In Vercel Dashboard → Project → Settings → Environment Variables, add:
+ *       TWINVOLT_API_BASE_URL  =  https://your-backend.railway.app
+ *       TWINVOLT_WS_BASE_URL   =  wss://your-backend.railway.app
+ *  b) Run `python scripts/build-config.py` in your CI/CD step to inject the
+ *     URLs into src/ui/js/config.js before Vercel deploys the static files.
+ *
+ * LOCAL DEVELOPMENT: no configuration needed — relative '' URLs are automatic.
  */
 
+/**
+ * Resolves the REST API base URL from the runtime configuration object
+ * injected by config.js, or defaults to relative '' for same-origin (local dev).
+ * @returns {string}
+ */
+function _resolveApiBaseUrl() {
+  if (
+    typeof window !== 'undefined' &&
+    typeof window.TWINVOLT_API_BASE_URL === 'string' &&
+    window.TWINVOLT_API_BASE_URL !== '' &&
+    window.TWINVOLT_API_BASE_URL !== '__TWINVOLT_API_BASE_URL__'
+  ) {
+    return window.TWINVOLT_API_BASE_URL.replace(/\/+$/, '');
+  }
+  return '';
+}
+
+/**
+ * Resolves the WebSocket base URL (wss:// or ws://) from the runtime config,
+ * or derives it from window.location for the same-origin case.
+ * Exported so websocket.js can import it without a separate module.
+ * @returns {string}
+ */
+export function resolveWsBaseUrl() {
+  if (
+    typeof window !== 'undefined' &&
+    typeof window.TWINVOLT_WS_BASE_URL === 'string' &&
+    window.TWINVOLT_WS_BASE_URL !== '' &&
+    window.TWINVOLT_WS_BASE_URL !== '__TWINVOLT_WS_BASE_URL__'
+  ) {
+    return window.TWINVOLT_WS_BASE_URL.replace(/\/+$/, '');
+  }
+  // Same-origin fallback: derive ws(s):// from the current page's host
+  if (typeof window !== 'undefined') {
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return proto + '//' + window.location.host;
+  }
+  return 'ws://localhost:8000';
+}
+
 class ApiClient {
-  constructor(baseUrl = '') {
+  constructor(baseUrl = _resolveApiBaseUrl()) {
     this.baseUrl = baseUrl;
   }
 
@@ -178,9 +233,13 @@ class ApiClient {
 
   // Telemetry Ingest
   async ingestTelemetry(payload) {
+    const fullPayload = {
+      timestamp_ns: payload.timestamp_ns || (Date.now() * 1_000_000),
+      ...payload,
+    };
     return this._request('/api/v1/telemetry/ingest', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify(fullPayload),
     });
   }
 
@@ -268,8 +327,113 @@ class ApiClient {
       method: 'POST',
     });
   }
+
+  // Physical Serial & Arduino Hardware
+  async getSerialPorts() {
+    return this._request('/api/v1/gateway/serial/ports');
+  }
+
+  async connectArduino(config) {
+    return this._request('/api/v1/gateway/arduino/connect', {
+      method: 'POST',
+      body: JSON.stringify(config),
+    });
+  }
+
+  async disconnectArduino() {
+    return this._request('/api/v1/gateway/arduino/disconnect', {
+      method: 'POST',
+    });
+  }
+
+  async getArduinoStatus() {
+    return this._request('/api/v1/gateway/arduino/status');
+  }
+
+  async getArduinoRecords() {
+    return this._request('/api/v1/gateway/arduino/records');
+  }
+
+  // Arduino Firmware Workspace
+  async getFirmwareFiles() {
+    return this._request('/api/v1/firmware/files');
+  }
+
+  async getFirmwareContent(filename) {
+    const url = `${this.baseUrl}/api/v1/firmware/files/${encodeURIComponent(filename)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to read firmware file.`);
+    return res.text();
+  }
+
+  async saveFirmware(filename, content) {
+    return this._request('/api/v1/firmware/save', {
+      method: 'POST',
+      body: JSON.stringify({ filename, content }),
+    });
+  }
+
+  async uploadFirmware(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const url = `${this.baseUrl}/api/v1/firmware/upload`;
+    const res = await fetch(url, { method: 'POST', body: formData });
+    if (!res.ok) {
+      let errData = {};
+      try { errData = await res.json(); } catch (_) {}
+      throw new Error(errData.detail || `Upload failed with HTTP ${res.status}`);
+    }
+    return res.json();
+  }
+
+  async verifyFirmware(filename, boardFqbn = 'arduino:avr:uno') {
+    return this._request('/api/v1/firmware/verify', {
+      method: 'POST',
+      body: JSON.stringify({ filename, board_fqbn: boardFqbn }),
+    });
+  }
+
+  async flashFirmware(filename, port, boardFqbn = 'arduino:avr:uno') {
+    return this._request('/api/v1/firmware/flash', {
+      method: 'POST',
+      body: JSON.stringify({ filename, port, board_fqbn: boardFqbn }),
+    });
+  }
+
+  // Isolated Mock Telemetry Mode
+  async getMockStatus() {
+    return this._request('/api/v1/mock/status');
+  }
+
+  async startMock() {
+    return this._request('/api/v1/mock/start', { method: 'POST' });
+  }
+
+  async stopMock() {
+    return this._request('/api/v1/mock/stop', { method: 'POST' });
+  }
+
+  async configureMock(config) {
+    return this._request('/api/v1/mock/configure', {
+      method: 'POST',
+      body: JSON.stringify(config),
+    });
+  }
+
+  async resetMock() {
+    return this._request('/api/v1/mock/reset', { method: 'POST' });
+  }
+
+  async injectMockError(errorType = 'malformed_frame') {
+    return this._request('/api/v1/mock/inject-error', {
+      method: 'POST',
+      body: JSON.stringify({ error_type: errorType }),
+    });
+  }
+
+  async getMockRecords() {
+    return this._request('/api/v1/mock/records');
+  }
 }
 
 export const api = new ApiClient();
-
-

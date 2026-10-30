@@ -41,6 +41,12 @@ class TestTcpSocketSource(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(frame2.payload, '{"voltage_v": 3.64, "current_a": 2.1}')
 
         await source.stop()
+        for _, w in received_clients:
+            w.close()
+            try:
+                await w.wait_closed()
+            except Exception:
+                pass
         server.close()
         await server.wait_closed()
 

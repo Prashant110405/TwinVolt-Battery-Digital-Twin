@@ -108,21 +108,30 @@ def parse_dataset(filename: str, content: bytes) -> dict[str, Any]:
     warnings: list[str] = []
     if ext == "csv":
         try:
-            reader = csv.DictReader(io.StringIO(text, newline=""), strict=True)
-            columns = reader.fieldnames
+            raw_reader = csv.reader(io.StringIO(text, newline=""), strict=True)
+            try:
+                columns = next(raw_reader)
+            except StopIteration:
+                columns = []
             if not columns or any(not name or not name.strip() for name in columns):
                 raise DatasetError("CSV must have non-empty column headers.")
             if len(columns) > MAX_COLUMNS or len(set(columns)) != len(columns):
                 raise DatasetError(f"CSV must have at most {MAX_COLUMNS} unique columns.")
             rows = []
-            for row in reader:
+            for row in raw_reader:
                 if len(rows) >= MAX_ROWS:
                     raise DatasetError(f"Dataset exceeds the {MAX_ROWS:,}-row processing limit.")
                 if (len(rows) + 1) * len(columns) > MAX_CELLS:
                     raise DatasetError(f"Dataset exceeds the {MAX_CELLS:,}-cell processing limit.")
-                rows.append({key: value for key, value in row.items() if key is not None})
-                if None in row:
-                    warnings.append("Some CSV rows contain more fields than the header; extra fields were ignored.")
+                if not row:
+                    rows.append({col: None for col in columns})
+                else:
+                    row_dict = {}
+                    for i, col in enumerate(columns):
+                        row_dict[col] = row[i] if i < len(row) else None
+                    if len(row) > len(columns):
+                        warnings.append("Some CSV rows contain more fields than the header; extra fields were ignored.")
+                    rows.append(row_dict)
         except csv.Error as exc:
             raise DatasetError(f"Malformed CSV: {exc}") from exc
     else:

@@ -29,6 +29,9 @@ class TelemetrySnapshotDTO(BaseModel):
     max_cell_temperature_c: Optional[float] = None
     soc_fraction: Optional[float] = None
     soh_fraction: Optional[float] = None
+    source: Optional[str] = None
+    metadata: Optional[dict[str, str]] = None
+    quality: Optional[str] = "VALID"
 
 
 class TelemetryBatchIngestDTO(BaseModel):

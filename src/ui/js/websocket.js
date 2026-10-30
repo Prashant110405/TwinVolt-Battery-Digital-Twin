@@ -1,9 +1,14 @@
 /**
  * Native WebSocket Real-Time Client for TwinVolt
  * Manages connection lifecycles, auto-reconnect, heartbeat ping/pong, and state dispatching.
+ *
+ * WebSocket URL resolution supports both deployment modes:
+ *  • Same-origin (local dev / Docker): resolveWsBaseUrl() returns ws(s)://window.location.host
+ *  • Cross-origin (Vercel + separate backend): window.TWINVOLT_WS_BASE_URL set by config.js
  */
 
 import { store } from './state.js';
+import { resolveWsBaseUrl } from './api.js';
 
 class WebSocketClient {
   constructor() {
@@ -26,13 +31,14 @@ class WebSocketClient {
     this.systemId = systemId;
     this.isExplicitDisconnect = false;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
+    // Resolve WebSocket base URL — supports both same-origin (local dev) and
+    // cross-origin (Vercel frontend + separate persistent backend) modes.
+    const wsBase = resolveWsBaseUrl();
     const path = systemId
       ? `/api/v1/ws/twins/${encodeURIComponent(systemId)}`
       : '/api/v1/ws';
 
-    const wsUrl = `${protocol}//${host}${path}`;
+    const wsUrl = wsBase + path;
     store.setWsStatus('RECONNECTING');
 
     try {

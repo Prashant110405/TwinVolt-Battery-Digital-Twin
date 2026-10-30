@@ -253,7 +253,7 @@ class ModelInput:
 
 @dataclass(frozen=True)
 class ModelOutput:
-    """Output vector container (y[k]) computed from state and input vectors.
+    r"""Output vector container (y[k]) computed from state and input vectors.
 
     All physical quantities use explicit SI units:
     - terminal_voltage_v: Predicted terminal voltage across the cell/pack terminals in Volts.
@@ -306,7 +306,7 @@ class ModelOutput:
 
 @dataclass(frozen=True)
 class ModelParameters:
-    """Generic base parameter container for mathematical battery models.
+    r"""Generic base parameter container for mathematical battery models.
 
     All physical parameters use explicit SI units:
     - nominal_capacity_ah: Nominal charge capacity in Ampere-hours ($> 0.0$).
@@ -348,7 +348,7 @@ class ModelParameters:
 
     @property
     def thermal_mass_j_per_k(self) -> float:
-        """Computed lumped thermal capacitance $C_{th} = m \cdot C_p$ in J/K."""
+        r"""Computed lumped thermal capacitance $C_{th} = m \cdot C_p$ in J/K."""
         return self.cell_mass_kg * self.specific_heat_capacity_j_per_kg_k
 
     def to_dict(self) -> dict[str, Any]:

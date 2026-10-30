@@ -38,19 +38,43 @@ export class TelemetryView {
                     <td>Pack Terminal Voltage</td>
                     <td id="tel-v" class="cell-mono">--</td>
                     <td class="cell-mono">V</td>
-                    <td><span class="badge badge-gray">PERSISTED OBSERVATION</span></td>
+                    <td><span class="badge badge-gray">OBSERVED</span></td>
                   </tr>
                   <tr>
                     <td>Pack Load Current</td>
                     <td id="tel-i" class="cell-mono">--</td>
                     <td class="cell-mono">A</td>
-                    <td><span class="badge badge-gray">PERSISTED OBSERVATION</span></td>
+                    <td><span class="badge badge-gray">OBSERVED</span></td>
                   </tr>
                   <tr>
-                    <td>Reported Pack Power</td>
+                    <td>Calculated Pack Power (P = V × I)</td>
                     <td id="tel-p" class="cell-mono">--</td>
                     <td class="cell-mono">W</td>
-                    <td><span class="badge badge-gray">PERSISTED OBSERVATION</span></td>
+                    <td><span class="badge badge-cyan">CALCULATED</span></td>
+                  </tr>
+                  <tr>
+                    <td>Pack Core Temperature</td>
+                    <td id="tel-temp" class="cell-mono">--</td>
+                    <td class="cell-mono">°C</td>
+                    <td><span class="badge badge-gray">OBSERVED</span></td>
+                  </tr>
+                  <tr>
+                    <td>State of Charge (SoC)</td>
+                    <td id="tel-soc" class="cell-mono">--</td>
+                    <td class="cell-mono">%</td>
+                    <td><span class="badge badge-blue">ESTIMATED</span></td>
+                  </tr>
+                  <tr>
+                    <td>State of Health (SoH)</td>
+                    <td id="tel-soh" class="cell-mono">--</td>
+                    <td class="cell-mono">%</td>
+                    <td><span class="badge badge-blue">ESTIMATED</span></td>
+                  </tr>
+                  <tr>
+                    <td>Telemetry Freshness / Quality</td>
+                    <td id="tel-quality" class="cell-mono">--</td>
+                    <td class="cell-mono">status</td>
+                    <td><span id="tel-source-mode-badge" class="badge badge-gray">AWAITING DATA</span></td>
                   </tr>
                   <tr>
                     <td>Observation Timestamp</td>
@@ -60,6 +84,10 @@ export class TelemetryView {
                   </tr>
                 </tbody>
               </table>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-3);">
+              <button id="btn-export-telemetry-json" class="btn btn-secondary btn-sm">Export Telemetry (JSON)</button>
+              <button id="btn-export-telemetry-csv" class="btn btn-secondary btn-sm">Export Telemetry (CSV)</button>
             </div>
           </div>
           <div class="card source-card">
@@ -175,6 +203,8 @@ export class TelemetryView {
               pack_current_a: i,
               ...(temp !== null ? { ambient_temperature_c: temp } : {}),
               timestamp_ns: Date.now() * 1_000_000,
+              source: 'manual',
+              metadata: { source: 'manual' },
             });
             if (!sent) throw new Error('WebSocket is no longer connected.');
             if (statusEl) {
@@ -188,6 +218,8 @@ export class TelemetryView {
               pack_current_a: i,
               ...(temp !== null ? { ambient_temperature_c: temp } : {}),
               timestamp_ns: Date.now() * 1_000_000,
+              source: 'manual',
+              metadata: { source: 'manual' },
             });
             if (statusEl) {
               statusEl.textContent = `Injected via REST for ${store.activeTwinId}.`;
@@ -205,6 +237,41 @@ export class TelemetryView {
         }
       });
     }
+
+    // Export Telemetry Buttons
+    this.container.querySelector('#btn-export-telemetry-json')?.addEventListener('click', async () => {
+      if (!store.activeTwinId) return alert('Select a twin first.');
+      try {
+        const history = await api.getTelemetryHistory(store.activeTwinId, 300, false);
+        const blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `telemetry_${store.activeTwinId}_${Date.now()}.json`;
+        a.click();
+      } catch (err) {
+        alert(`Export failed: ${err.message}`);
+      }
+    });
+
+    this.container.querySelector('#btn-export-telemetry-csv')?.addEventListener('click', async () => {
+      if (!store.activeTwinId) return alert('Select a twin first.');
+      try {
+        const history = await api.getTelemetryHistory(store.activeTwinId, 300, false);
+        if (!Array.isArray(history) || history.length === 0) return alert('No telemetry records to export.');
+        const keys = ['timestamp_ns', 'pack_voltage_v', 'pack_current_a', 'pack_power_w', 'ambient_temperature_c'];
+        const csvRows = [keys.join(',')];
+        for (const row of history) {
+          csvRows.push(keys.map(k => row[k] !== undefined && row[k] !== null ? row[k] : '').join(','));
+        }
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `telemetry_${store.activeTwinId}_${Date.now()}.csv`;
+        a.click();
+      } catch (err) {
+        alert(`Export failed: ${err.message}`);
+      }
+    });
   }
 
   update(changeType, appState, payload = {}) {
@@ -221,12 +288,65 @@ export class TelemetryView {
         statusEl.style.color = 'var(--color-muted)';
       }
       this.loadLatestObservation(appState.activeTwinId);
+    } else if (changeType === 'STATE_UPDATED' && appState.latestState) {
+      this._renderLiveState(appState);
+    }
+  }
+
+  _renderLiveState(appState) {
+    const s = appState.latestState;
+    if (!s) return;
+
+    const v = Number.isFinite(s.diagnostics?.telemetry_voltage_v) ? s.diagnostics.telemetry_voltage_v : s.terminal_voltage_v;
+    const i = Number.isFinite(s.diagnostics?.telemetry_current_a) ? s.diagnostics.telemetry_current_a : null;
+    const p = (v !== null && i !== null) ? (v * i) : null;
+    const temp = Number.isFinite(s.temperature_c) ? s.temperature_c : null;
+    const soc = Number.isFinite(s.estimated_soc) ? s.estimated_soc * 100 : (Number.isFinite(s.simulated_soc) ? s.simulated_soc * 100 : null);
+
+    const elV = document.getElementById('tel-v');
+    const elI = document.getElementById('tel-i');
+    const elP = document.getElementById('tel-p');
+    const elTemp = document.getElementById('tel-temp');
+    const elSoc = document.getElementById('tel-soc');
+    const elSoh = document.getElementById('tel-soh');
+    const elTs = document.getElementById('tel-ts');
+    const elQuality = document.getElementById('tel-quality');
+    const elModeBadge = document.getElementById('tel-source-mode-badge');
+    const streamStatus = document.getElementById('tel-stream-status');
+
+    const soh = Number.isFinite(s.soh_unified_fraction)
+      ? s.soh_unified_fraction * 100
+      : (Number.isFinite(s.soh_fraction) ? s.soh_fraction * 100 : null);
+
+    if (elV) elV.textContent = v !== null ? v.toFixed(3) : '—';
+    if (elI) elI.textContent = i !== null ? i.toFixed(3) : '—';
+    if (elP) elP.textContent = p !== null ? p.toFixed(2) : '—';
+    if (elTemp) elTemp.textContent = temp !== null ? temp.toFixed(1) : '—';
+    if (elSoc) elSoc.textContent = soc !== null ? `${soc.toFixed(1)}%` : '—';
+    if (elSoh) elSoh.textContent = soh !== null ? `${soh.toFixed(1)}%` : 'Unavailable';
+    if (elTs) elTs.textContent = new Date(s.timestamp_ns / 1e6).toLocaleTimeString();
+
+    const isStale = (Date.now() - (appState.lastStateReceivedAtMs || Date.now())) > 5000;
+    if (elQuality) {
+      elQuality.textContent = isStale ? 'STALE' : 'VALID';
+      elQuality.style.color = isStale ? 'var(--color-warning)' : 'var(--color-success)';
+    }
+
+    if (elModeBadge) {
+      const mode = (appState.activeMode || 'IDLE').toUpperCase();
+      elModeBadge.textContent = mode;
+      elModeBadge.className = `badge ${mode === 'MOCK' ? 'badge-amber' : (mode === 'REPLAY' ? 'badge-blue' : (mode === 'LIVE' ? 'badge-green' : 'badge-gray'))}`;
+    }
+
+    if (streamStatus) {
+      streamStatus.textContent = `Streaming (${appState.wsStatus})`;
+      streamStatus.className = `badge ${appState.wsStatus === 'CONNECTED' ? 'badge-green' : 'badge-amber'}`;
     }
   }
 
   async loadLatestObservation(systemId) {
     const status = document.getElementById('tel-stream-status');
-    for (const id of ['tel-v', 'tel-i', 'tel-p', 'tel-ts']) {
+    for (const id of ['tel-v', 'tel-i', 'tel-p', 'tel-temp', 'tel-soc', 'tel-soh', 'tel-ts']) {
       const el = document.getElementById(id);
       if (el) el.textContent = '—';
     }
@@ -243,15 +363,28 @@ export class TelemetryView {
         if (status) { status.textContent = 'No telemetry observations recorded'; status.className = 'badge badge-gray'; }
         return;
       }
+      const p = (Number.isFinite(sample.pack_voltage_v) && Number.isFinite(sample.pack_current_a))
+        ? (sample.pack_voltage_v * sample.pack_current_a)
+        : sample.pack_power_w;
+
+      const soc = Number.isFinite(sample.soc_fraction) ? (sample.soc_fraction * 100).toFixed(1) + '%' : '—';
+      const soh = Number.isFinite(sample.soh_fraction) ? (sample.soh_fraction * 100).toFixed(1) + '%' : 'Unavailable';
+
       const fields = {
         'tel-v': [sample.pack_voltage_v, 3],
         'tel-i': [sample.pack_current_a, 3],
-        'tel-p': [sample.pack_power_w, 2],
+        'tel-p': [p, 2],
+        'tel-temp': [sample.ambient_temperature_c, 1],
       };
       Object.entries(fields).forEach(([id, [value, digits]]) => {
         const el = document.getElementById(id);
         if (el) el.textContent = Number.isFinite(value) ? Number(value).toFixed(digits) : '—';
       });
+      const elSoc = document.getElementById('tel-soc');
+      const elSoh = document.getElementById('tel-soh');
+      if (elSoc) elSoc.textContent = soc;
+      if (elSoh) elSoh.textContent = soh;
+
       const timestamp = document.getElementById('tel-ts');
       if (timestamp) timestamp.textContent = Number.isFinite(sample.timestamp_ns)
         ? new Date(sample.timestamp_ns / 1e6).toLocaleString() : '—';
@@ -260,6 +393,7 @@ export class TelemetryView {
       if (status) { status.textContent = `History unavailable: ${err.message}`; status.className = 'badge badge-red'; }
     }
   }
+
 
   destroy() {}
 }

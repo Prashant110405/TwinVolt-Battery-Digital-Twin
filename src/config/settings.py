@@ -5,8 +5,6 @@ Uses Pydantic v2 data validation without external uninstalled dependencies.
 """
 
 import os
-import json
-import hmac
 from typing import Any, Mapping, Optional
 from pydantic import BaseModel, Field, field_validator
 
@@ -30,24 +28,6 @@ class AppSettings(BaseModel):
     )
     storage_dir: str = Field("data/storage", description="Base filesystem directory for file-backed persistence.")
     seed_defaults: bool = Field(False, description="Whether to automatically load default battery profiles and sample digital twin.")
-    environment: str = Field("production", repr=False)
-    auth_users: dict[str, str] = Field(default_factory=dict, repr=False, exclude=True)
-    session_secret: Optional[str] = Field(None, repr=False, exclude=True)
-    auth_cookie_secure: bool = Field(True, repr=False)
-    session_max_age_seconds: int = Field(3600, ge=300, le=86400, repr=False)
-
-    def validate_auth_configuration(self) -> None:
-        """Fail closed unless users have Werkzeug scrypt hashes and a strong session signing key."""
-        if not self.auth_users:
-            raise ValueError("TWINVOLT_AUTH_USERS_JSON must configure at least one username and scrypt password hash.")
-        if any(not username or len(username) > 128 or not password_hash.startswith("scrypt:") for username, password_hash in self.auth_users.items()):
-            raise ValueError("Authentication users must have valid usernames and Werkzeug scrypt password hashes.")
-        if not self.session_secret or len(self.session_secret.encode("utf-8")) < 32:
-            raise ValueError("TWINVOLT_SESSION_SECRET must contain at least 32 UTF-8 bytes.")
-        if not self.auth_cookie_secure:
-            local_hosts = {"127.0.0.1", "localhost", "::1"}
-            if self.environment.lower() != "development" or self.host not in local_hosts:
-                raise ValueError("Insecure session cookies are allowed only in explicit development mode bound to loopback.")
 
     @field_validator("log_level", mode="before")
     @classmethod
@@ -109,23 +89,6 @@ class AppSettings(BaseModel):
         if "TWINVOLT_SEED_DEFAULTS" in source:
             val = source["TWINVOLT_SEED_DEFAULTS"].strip().lower()
             kwargs["seed_defaults"] = val in ("true", "1", "yes", "on")
-
-        kwargs["environment"] = source.get("TWINVOLT_ENV", "production").strip().lower()
-        kwargs["session_secret"] = source.get("TWINVOLT_SESSION_SECRET")
-        users_json = source.get("TWINVOLT_AUTH_USERS_JSON")
-        if users_json:
-            try:
-                users = json.loads(users_json)
-            except (ValueError, TypeError) as exc:
-                raise ValueError("TWINVOLT_AUTH_USERS_JSON must be a JSON object of usernames to Werkzeug scrypt hashes.") from exc
-            if not isinstance(users, dict) or any(not isinstance(key, str) or not isinstance(value, str) for key, value in users.items()):
-                raise ValueError("TWINVOLT_AUTH_USERS_JSON must map usernames to password-hash strings.")
-            kwargs["auth_users"] = users
-        secure_cookie = source.get("TWINVOLT_AUTH_COOKIE_SECURE")
-        if secure_cookie is not None:
-            kwargs["auth_cookie_secure"] = secure_cookie.strip().lower() in ("true", "1", "yes", "on")
-        if "TWINVOLT_SESSION_MAX_AGE_SECONDS" in source:
-            kwargs["session_max_age_seconds"] = source["TWINVOLT_SESSION_MAX_AGE_SECONDS"]
 
         return cls(**kwargs)
 

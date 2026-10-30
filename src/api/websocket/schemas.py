@@ -45,9 +45,12 @@ class WSTelemetryIngestMessage(BaseModel):
     avg_cell_temperature_c: Optional[float] = None
     max_cell_temperature_c: Optional[float] = None
     soc_fraction: Optional[float] = Field(None, ge=0.0, le=1.0)
+    soh_fraction: Optional[float] = None
     timestamp_ns: Optional[int] = None
     sequence_number: Optional[int] = None
     headers: Optional[Mapping[str, str]] = None
+    source: Optional[str] = None
+    metadata: Optional[Mapping[str, str]] = None
 
 
 # ------------------------------------------------------------------------------
@@ -88,6 +91,8 @@ class WSTwinStateMessage(BaseModel):
     terminal_voltage_v: float
     simulated_soc: float
     estimated_soc: Optional[float] = None
+    soh_unified_fraction: Optional[float] = None
+    source: Optional[str] = None
     temperature_c: float
     voltage_residual_v: Optional[float] = None
     temperature_residual_c: Optional[float] = None

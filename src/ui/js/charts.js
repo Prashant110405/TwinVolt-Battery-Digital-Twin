@@ -163,10 +163,10 @@ export class StreamingChart {
     const { ctx, padding, width, height } = this;
 
     ctx.save();
-    ctx.strokeStyle = '#e8edf4';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1;
-    ctx.fillStyle = '#718096';
-    ctx.font = '10px "JetBrains Mono", monospace';
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px "JetBrains Mono", "Courier New", monospace';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
 
@@ -193,8 +193,8 @@ export class StreamingChart {
     const first = timestamps[0];
     const last = timestamps[timestamps.length - 1];
     ctx.save();
-    ctx.fillStyle = '#718096';
-    ctx.font = '10px "JetBrains Mono", monospace';
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px "JetBrains Mono", "Courier New", monospace';
     ctx.textBaseline = 'top';
     ctx.textAlign = 'left';
     const fmt = (seconds) => {
@@ -211,7 +211,7 @@ export class StreamingChart {
     const { ctx, width, height } = this;
     ctx.clearRect(0, 0, width, height);
     ctx.save();
-    ctx.fillStyle = '#718096';
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.5)';
     ctx.font = '12px "Inter", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';

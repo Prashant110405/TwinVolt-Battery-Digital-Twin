@@ -159,7 +159,7 @@ export class DiagnosticsView {
 
     // Subscribe to real-time store updates
     store.subscribe((type, state, payload) => {
-      if (type === 'TWIN_STATE_UPDATED' || type === 'TWIN_EVENT') {
+      if (type === 'STATE_UPDATED' || type === 'EVENT_RECEIVED' || type === 'TWIN_CHANGED') {
         this.refresh();
       }
     });

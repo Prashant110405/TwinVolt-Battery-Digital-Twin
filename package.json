@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "TwinVolt Universal Battery Digital Twin Platform",
   "scripts": {
-    "build": "echo TwinVolt ready for deployment",
     "dev": "python -m src.server --host 127.0.0.1 --port 8000",
     "start": "python -m src.server --host 127.0.0.1 --port 8000",
     "server": "python -m src.server",

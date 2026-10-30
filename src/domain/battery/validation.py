@@ -91,7 +91,7 @@ def validate_voltage_limits(
     nominal_voltage_v: float,
     max_voltage_v: float,
 ) -> None:
-    """Validates voltage limits ordering and positivity.
+    r"""Validates voltage limits ordering and positivity.
 
     Invariant: $0 < V_{min} \le V_{nominal} \le V_{max}$ and $V_{min} < V_{max}$.
 

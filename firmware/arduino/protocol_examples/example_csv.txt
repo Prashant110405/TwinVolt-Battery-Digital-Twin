@@ -1,0 +1,7 @@
+# Example CSV Telemetry Stream
+# Format: timestamp_ms,voltage_v,current_a,temperature_c
+1000,3.682,1.210,25.1
+1500,3.681,1.215,25.2
+2000,3.680,1.208,25.2
+2500,3.679,1.212,25.3
+3000,3.678,1.210,25.4

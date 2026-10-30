@@ -37,6 +37,10 @@
       </div>
 
       <div class="header-status">
+        <div id="header-mode-badge" class="mode-pill mode-idle">
+          <span class="mode-dot"></span>
+          <span id="header-mode-text">IDLE</span>
+        </div>
         <div class="latency-readout" id="latency-readout" hidden>
           <span>Latency:</span>
           <span id="header-latency">—</span>
@@ -62,6 +66,18 @@
             <button class="nav-item-btn" data-view="telemetry" aria-label="Live Telemetry View">
               <svg class="nav-icon" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
               <span class="nav-label">Live Telemetry</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-item-btn" data-view="hardware" aria-label="Hardware and Arduino View">
+              <svg class="nav-icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"></rect><path d="M9 9h6v6H9z"></path><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"></path></svg>
+              <span class="nav-label">Hardware & Arduino</span>
+            </button>
+          </li>
+          <li>
+            <button class="nav-item-btn" data-view="mock" aria-label="Mock Generator Mode">
+              <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
+              <span class="nav-label">Mock Generator</span>
             </button>
           </li>
           <li>
@@ -119,6 +135,8 @@
     <main id="app-main">
       <div id="view-overview" class="view-container active"></div>
       <div id="view-telemetry" class="view-container"></div>
+      <div id="view-hardware" class="view-container"></div>
+      <div id="view-mock" class="view-container"></div>
       <div id="view-twin" class="view-container"></div>
       <div id="view-estimation" class="view-container"></div>
       <div id="view-replay" class="view-container"></div>
@@ -128,6 +146,11 @@
       <div id="view-datasets" class="view-container"></div>
     </main>
   </div>
+
+  <!-- Runtime Configuration Bridge (must load before main application script) -->
+  <!-- In production Vercel deployments, deploy scripts/build-config.py to inject backend URLs. -->
+  <!-- In local dev / Docker, this script is a no-op and relative URLs are used. -->
+  <script src="js/config.js"></script>
 
   <!-- Entry Script -->
   <script type="module" src="js/app.js"></script>

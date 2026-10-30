@@ -1,0 +1,5 @@
+{"millis": 1000, "voltage_v": 3.682, "current_a": 1.210, "temperature_c": 25.1}
+{"millis": 1500, "voltage_v": 3.681, "current_a": 1.215, "temperature_c": 25.2}
+{"millis": 2000, "voltage_v": 3.680, "current_a": 1.208, "temperature_c": 25.2}
+{"millis": 2500, "voltage_v": 3.679, "current_a": 1.212, "temperature_c": 25.3}
+{"millis": 3000, "voltage_v": 3.678, "current_a": 1.210, "temperature_c": 25.4}

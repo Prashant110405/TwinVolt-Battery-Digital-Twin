@@ -44,6 +44,33 @@ def _serialize_twin_sync_to_ws_state(system_id: str, out: TwinSyncOutput) -> WST
     v_res = out.residuals.get("voltage_residual_v") if out.residuals else None
     t_res = out.residuals.get("temperature_residual_c") if out.residuals else None
 
+    soh = None
+    if out.telemetry and out.telemetry.soh_fraction is not None:
+        soh = out.telemetry.soh_fraction
+    elif "soh_unified_fraction" in out.diagnostics:
+        soh = out.diagnostics["soh_unified_fraction"]
+
+    source = None
+    if out.telemetry and out.telemetry.metadata:
+        source = out.telemetry.metadata.get("source")
+
+    # Keep the physical measurements available to the existing dashboard UI.
+    diagnostics = dict(out.diagnostics)
+    if out.telemetry is not None:
+        diagnostics["telemetry_voltage_v"] = out.telemetry.pack_voltage_v
+        diagnostics["telemetry_current_a"] = out.telemetry.pack_current_a
+        diagnostics["telemetry_temperature_c"] = (
+            out.telemetry.avg_cell_temperature_c
+            if out.telemetry.avg_cell_temperature_c is not None
+            else out.telemetry.ambient_temperature_c
+        )
+        if out.telemetry.soc_fraction is not None:
+            diagnostics["telemetry_soc_fraction"] = out.telemetry.soc_fraction
+        if out.telemetry.soh_fraction is not None:
+            diagnostics["telemetry_soh_fraction"] = out.telemetry.soh_fraction
+        if out.telemetry.metadata:
+            diagnostics["battery_status"] = out.telemetry.metadata.get("battery_status")
+
     return WSTwinStateMessage(
         system_id=system_id,
         step_index=out.step_index,
@@ -52,11 +79,13 @@ def _serialize_twin_sync_to_ws_state(system_id: str, out: TwinSyncOutput) -> WST
         terminal_voltage_v=out.model_output.terminal_voltage_v,
         simulated_soc=out.model_output.state.soc_fraction,
         estimated_soc=est_soc,
+        soh_unified_fraction=soh,
+        source=source,
         temperature_c=out.model_output.state.temperature_c,
         voltage_residual_v=v_res,
         temperature_residual_c=t_res,
         anomalies_count=out.diagnostics.get("anomalies_count", 0),
-        diagnostics=dict(out.diagnostics),
+        diagnostics=diagnostics,
     )
 
 
@@ -95,6 +124,11 @@ async def _handle_incoming_message(
             client_id,
             {"type": "subscribed", "system_id": sub_msg.system_id},
         )
+        if twin_service.exists(sub_msg.system_id):
+            twin = twin_service.get_twin(sub_msg.system_id)
+            if twin.latest_sync_output is not None:
+                state_broadcast = _serialize_twin_sync_to_ws_state(sub_msg.system_id, twin.latest_sync_output)
+                await manager.send_personal_message(client_id, state_broadcast)
         return
 
     # 3. Unsubscribe Command
@@ -133,10 +167,15 @@ async def _handle_incoming_message(
                 headers=ingest_msg.headers,
             )
         else:
+            import time
+            meta = dict(ingest_msg.metadata or {})
+            if ingest_msg.source and "source" not in meta:
+                meta["source"] = ingest_msg.source
+
             snap = TelemetrySnapshot(
                 snapshot_id=f"ws_snap_{ingest_msg.system_id}_{ingest_msg.sequence_number or 0}",
                 system_id=ingest_msg.system_id,
-                timestamp_ns=ingest_msg.timestamp_ns,
+                timestamp_ns=ingest_msg.timestamp_ns or time.time_ns(),
                 sequence_number=ingest_msg.sequence_number,
                 pack_voltage_v=ingest_msg.pack_voltage_v,
                 pack_current_a=ingest_msg.pack_current_a,
@@ -145,6 +184,8 @@ async def _handle_incoming_message(
                 avg_cell_temperature_c=ingest_msg.avg_cell_temperature_c,
                 max_cell_temperature_c=ingest_msg.max_cell_temperature_c,
                 soc_fraction=ingest_msg.soc_fraction,
+                soh_fraction=ingest_msg.soh_fraction,
+                metadata=meta,
             )
             sync_out = telemetry_service.ingest_snapshot(snap)
 
@@ -185,6 +226,11 @@ async def _run_websocket_session(
     twin_service = services.twin_service if services else TwinApplicationService()
 
     client_id = await manager.connect(websocket, system_id=default_system_id)
+    if default_system_id and twin_service.exists(default_system_id):
+        twin = twin_service.get_twin(default_system_id)
+        if twin.latest_sync_output is not None:
+            initial_state = _serialize_twin_sync_to_ws_state(default_system_id, twin.latest_sync_output)
+            await manager.send_personal_message(client_id, initial_state)
 
     try:
         while True:

@@ -41,10 +41,16 @@ async def ingest_telemetry(
         )
 
     # Canonical TelemetrySnapshotDTO
+    import time
+    ts_ns = payload.timestamp_ns if payload.timestamp_ns is not None else time.time_ns()
+    meta = dict(payload.metadata or {})
+    if payload.source and "source" not in meta:
+        meta["source"] = payload.source
+
     snap = TelemetrySnapshot(
         snapshot_id=payload.snapshot_id or f"snap_{payload.system_id}",
         system_id=payload.system_id,
-        timestamp_ns=payload.timestamp_ns,
+        timestamp_ns=ts_ns,
         pack_voltage_v=payload.pack_voltage_v,
         pack_current_a=payload.pack_current_a,
         pack_power_w=payload.pack_power_w,
@@ -53,6 +59,7 @@ async def ingest_telemetry(
         max_cell_temperature_c=payload.max_cell_temperature_c,
         soc_fraction=payload.soc_fraction,
         soh_fraction=payload.soh_fraction,
+        metadata=meta,
     )
     sync_out = telemetry_service.ingest_snapshot(snap)
     return TelemetryIngestResponseDTO(
@@ -72,22 +79,30 @@ async def ingest_batch(
     telemetry_service: TelemetryIngestService = Depends(get_telemetry_service),
 ) -> dict[str, Any]:
     """Ingests an ordered batch sequence of telemetry observation snapshots."""
-    snapshots = [
-        TelemetrySnapshot(
-            snapshot_id=s.snapshot_id or f"snap_{payload.system_id}_{idx}",
-            system_id=payload.system_id,
-            timestamp_ns=s.timestamp_ns,
-            pack_voltage_v=s.pack_voltage_v,
-            pack_current_a=s.pack_current_a,
-            pack_power_w=s.pack_power_w,
-            ambient_temperature_c=s.ambient_temperature_c,
-            avg_cell_temperature_c=s.avg_cell_temperature_c,
-            max_cell_temperature_c=s.max_cell_temperature_c,
-            soc_fraction=s.soc_fraction,
-            soh_fraction=s.soh_fraction,
+    import time
+    base_ts = time.time_ns()
+    snapshots = []
+    for idx, s in enumerate(payload.snapshots):
+        s_ts = s.timestamp_ns if s.timestamp_ns is not None else (base_ts + idx * 1_000_000)
+        s_meta = dict(s.metadata or {})
+        if s.source and "source" not in s_meta:
+            s_meta["source"] = s.source
+        snapshots.append(
+            TelemetrySnapshot(
+                snapshot_id=s.snapshot_id or f"snap_{payload.system_id}_{idx}",
+                system_id=payload.system_id,
+                timestamp_ns=s_ts,
+                pack_voltage_v=s.pack_voltage_v,
+                pack_current_a=s.pack_current_a,
+                pack_power_w=s.pack_power_w,
+                ambient_temperature_c=s.ambient_temperature_c,
+                avg_cell_temperature_c=s.avg_cell_temperature_c,
+                max_cell_temperature_c=s.max_cell_temperature_c,
+                soc_fraction=s.soc_fraction,
+                soh_fraction=s.soh_fraction,
+                metadata=s_meta,
+            )
         )
-        for idx, s in enumerate(payload.snapshots)
-    ]
 
     outs = telemetry_service.ingest_batch(payload.system_id, snapshots)
     return {

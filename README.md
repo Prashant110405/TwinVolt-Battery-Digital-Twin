@@ -1,13 +1,14 @@
 # TwinVolt — Universal Battery Digital Twin Platform
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Development Status](https://img.shields.io/badge/Status-Under%20Active%20Bootstrap-orange.svg)](#current-development-status)
+[![Development Status](https://img.shields.io/badge/Status-Active%20Development-green.svg)](#current-development-status)
+[![Tests](https://img.shields.io/badge/Tests-891%20Passing-brightgreen.svg)](#testing-philosophy)
 
 ---
 
 ## 1. Project Overview
 
-**TwinVolt** is a modern, modular, and universal **Battery Digital Twin Platform** designed to model, monitor, simulate, and predict the behavior of electrochemical energy storage systems. 
+**TwinVolt** is a modern, modular, and universal **Battery Digital Twin Platform** designed to model, monitor, simulate, and predict the behavior of electrochemical energy storage systems.
 
 TwinVolt builds a dynamic, high-fidelity virtual replica of battery packs across diverse chemistries, form factors, and applications—bridging the gap between physical battery hardware, electro-thermal modeling, state estimation, and cloud analytics.
 
@@ -30,53 +31,99 @@ Modern battery systems operate across diverse domains: electric vehicles, microg
 
 TwinVolt is engineered from the ground up on ten foundational design principles:
 
-1. **Battery Agnostic**: Supports any cell chemistry (e.g., NMC, LFP, LCO, NCA, LTO, Solid-State, Sodium-ion), form factor (cylindrical, pouch, prismatic), and pack configuration (series/parallel topologies) via parametric configuration.
-2. **Model Agnostic**: Decouples the Digital Twin engine from specific mathematical representations. Supports Equivalent Circuit Models (Thevenin, 2-RC), electrochemical physics models (e.g., PyBaMM/DFN/SPM), and neural/empirical models behind a unified interface.
+1. **Battery Agnostic**: Supports any cell chemistry (NMC, LFP, LCO, NCA, LTO, Solid-State, Sodium-ion), form factor (cylindrical, pouch, prismatic), and pack configuration via parametric configuration.
+2. **Model Agnostic**: Supports Equivalent Circuit Models (Thevenin, 2-RC), electrochemical physics models (PyBaMM/DFN/SPM), and neural/empirical models behind a unified interface.
 3. **Hardware Agnostic**: Independent of any specific BMS microcontroller, analog front-end (AFE), or hardware vendor.
-4. **Protocol Agnostic**: Ingests telemetry across diverse industrial and embedded communication protocols (MQTT, CAN bus, Modbus, BLE, Serial/UART, WebSocket, REST) using pluggable adapters.
-5. **Modular Architecture**: Built with clear boundary layers and dependency inversion, allowing individual components (e.g., estimation algorithms, adapters, storage backends) to be swapped without system redesign.
-6. **Separation of Concerns**: Strict isolation between physical data ingestion, canonical data structures, domain modeling, state estimation, data persistence, and visualization.
-7. **Dual Battery Support (Physical + Virtual)**: Operates seamlessly with live hardware telemetry, historical replay datasets, or purely synthetic/simulated load profiles.
-8. **High Testability**: Every layer is architected for rigorous automated testing—from unit-level mathematical checks to simulated synthetic stress tests and hardware-in-the-loop (HIL) harnesses.
-9. **Extensibility**: Standardized plugin points for custom state estimators (Kalman filters, particle filters, ML estimators), new communication adapters, and analytics modules.
-10. **Future Scalability**: Designed to scale from single-cell laboratory testbenches to distributed multi-pack fleet monitoring architectures.
+4. **Protocol Agnostic**: Ingests telemetry across MQTT, CAN bus, Modbus, BLE, Serial/UART, WebSocket, REST using pluggable adapters.
+5. **Modular Architecture**: Clear boundary layers and dependency inversion.
+6. **Separation of Concerns**: Strict isolation between ingestion, domain modeling, state estimation, persistence, and visualization.
+7. **Dual Battery Support (Physical + Virtual)**: Live hardware telemetry, historical replay, or synthetic load profiles.
+8. **High Testability**: Every layer architected for rigorous automated testing.
+9. **Extensibility**: Standardized plugin points for custom estimators, adapters, and analytics.
+10. **Future Scalability**: Designed from single-cell testbenches to distributed multi-pack fleet monitoring.
 
 ---
 
 ## 4. Current Development Status
 
 > [!IMPORTANT]
-> **TwinVolt is currently in early-stage active development (Milestone 0: Repository & Foundation Bootstrap).**
+> **TwinVolt is in active development.** Core domain, estimation, ingestion, digital twin runtime, and API layers are implemented. Hardware gateway, mock telemetry generator, and the full real-time monitoring dashboard have been integrated.
 
-The repository currently establishes the foundational project structure, guidelines, and architecture definitions. **No application layers, physics engines, estimators, or web services have been implemented yet.** Implementation will proceed systematically across structured milestones.
-
-| Layer / Feature Area | Status | Planned Phase |
-| :--- | :--- | :--- |
-| **Repository Structure & Docs** | **Established** | Milestone 0 |
-| **Domain Entities & Canonical Schema** | *Planned* | Milestone 1 |
-| **Battery Model Abstraction & Engines** | *Planned* | Milestone 2 |
-| **Data Acquisition & Protocol Adapters** | *Planned* | Milestone 3 |
-| **Digital Twin Core Engine** | *Planned* | Milestone 4 |
-| **State Estimation (SOC / SOH / SOP)** | *Planned* | Milestone 5 |
-| **Backend Data Platform & APIs** | *Planned* | Milestone 6 |
-| **Frontend Dashboard & 3D Visualization** | *Planned* | Milestone 7 |
+| Layer / Feature Area | Status |
+| :--- | :--- |
+| **Repository Structure & Docs** | ✅ Established |
+| **Domain Entities & Canonical Schema** | ✅ Implemented |
+| **Battery Model Abstraction & ECM Engines** | ✅ Implemented |
+| **State Estimation (SOC / SOH / SOP)** | ✅ Implemented (EKF, Coulomb Counting, SOH) |
+| **Data Acquisition & Protocol Adapters** | ✅ Implemented (TCP, UDP, CAN, Serial, CSV, JSON) |
+| **Digital Twin Core Engine** | ✅ Implemented |
+| **Backend Data Platform & APIs (FastAPI)** | ✅ Implemented |
+| **Arduino / USB Serial Hardware Gateway** | ✅ Implemented (JSON Lines, CSV, Auto-detect) |
+| **Isolated Mock Telemetry Generator** | ✅ Implemented (with fault injection) |
+| **Firmware Workspace & Verification** | ✅ Implemented |
+| **Real-Time WebSocket Telemetry** | ✅ Implemented |
+| **Frontend Dashboard & Monitoring UI** | ✅ Implemented |
+| **Dataset Lab & Replay** | ✅ Implemented |
+| **Benchmarking & Prognostics** | ✅ Implemented |
+| **Automated Test Suite (891 tests)** | ✅ All Passing |
 
 ---
 
-## 5. High-Level Architecture
+## 5. Quick Start
 
-TwinVolt follows a clean unidirectional data flow and modular layered architecture:
+### Prerequisites
+- Python 3.11+
+- pip
+
+### Setup
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/Prashant110405/TwinVolt-Battery-Digital-Twin.git
+cd TwinVolt-Battery-Digital-Twin
+
+# 2. (Recommended) Create and activate a virtual environment
+python -m venv .venv
+# Windows PowerShell:
+.venv\Scripts\Activate.ps1
+# macOS / Linux:
+source .venv/bin/activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Configure environment
+cp .env.example .env
+
+# 5. Start the server
+python -m src.server --host 127.0.0.1 --port 8000
+```
+
+Open your browser to **[http://127.0.0.1:8000/ui](http://127.0.0.1:8000/ui)**.
+
+- **API Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **WebSocket**: `ws://127.0.0.1:8000/api/v1/telemetry/ws`
+
+### Run Automated Tests
+```bash
+python -m pytest
+```
+All **891 tests** pass without requiring physical hardware.
+
+---
+
+## 6. High-Level Architecture
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    Physical / Virtual Data Sources                      │
-│   (BMS Hardware, CAN Loggers, Laboratory Cyclers, Synthetic Profiles)  │
+│   (BMS Hardware, CAN Loggers, Arduino/ESP32, Laboratory Cyclers)        │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    Data Acquisition / Adapter Layer                     │
-│    (MQTT Ingestion, CAN Bus, Serial/UART, Modbus, Replay Handlers)      │
+│    (Arduino Serial Gateway, CAN Bus, TCP/UDP, Replay Handlers)          │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
                                      ▼
@@ -87,129 +134,201 @@ TwinVolt follows a clean unidirectional data flow and modular layered architectu
                                      │
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                      Universal Battery Domain                           │
-│        (Pack Topologies, Chemistry Profiles, Thermal Boundaries)        │
-└────────────────────────────────────┬────────────────────────────────────┘
-                                     │
-                                     ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      Battery Model Abstraction                          │
-│         (Equivalent Circuit Models, Electrochemical / PyBaMM, ML)        │
-└────────────────────────────────────┬────────────────────────────────────┘
-                                     │
-                                     ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         Digital Twin Core                               │
-│       (State Synchronization, Parameter Tracking, Twin Co-Simulation)   │
-└────────────────────────────────────┬────────────────────────────────────┘
-                                     │
-                                     ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│           State Estimation / Analytics / Fault Detection / Prediction    │
-│       (EKF/UKF SOC, SOH Capacity Fade, Thermal Runaway Alerts, RUL)     │
+│           State Estimation / Analytics / Fault Detection                │
+│       (EKF SOC, SOH Capacity Fade, Thermal Anomaly Alerts, RUL)         │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                     Backend / Data Platform                             │
-│     (FastAPI Services, TimescaleDB/PostgreSQL, Redis Streams/Cache)     │
+│     (FastAPI Services, REST API, WebSocket Real-Time Streams)           │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                     Frontend / Visualization                            │
-│     (Real-Time Web Dashboard, Cell Matrix Heatmaps, Twin Metrics UI)    │
+│     (Real-Time Dashboard, Hardware Page, Mock Generator, Charts)        │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 6. Planned Capabilities
+## 7. Dashboard Features
 
-- **Real-Time Telemetry Normalization**: Ingestion of voltage, current, internal resistance, and multi-point temperature data into a strictly typed canonical format.
-- **Dynamic State Estimation**:
-  - *SOC (State of Charge)*: Coulomb counting with Extended Kalman Filter (EKF) and Unscented Kalman Filter (UKF) drift correction.
-  - *SOH (State of Health)*: Capacity fade tracking and internal impedance growth tracking.
-  - *SOP (State of Power)*: Dynamic continuous and peak charge/discharge power limits.
-- **High-Fidelity Simulation & Physics Integration**: Co-simulation using Equivalent Circuit Models (ECM 1-RC, 2-RC) and electrochemical models (e.g., PyBaMM).
-- **Fault Detection & Safety Monitoring**: Real-time detection of over-voltage, under-voltage, thermal runaway precursors, cell imbalance, sensor anomalies, and internal short-circuit indicators.
-- **Predictive Analytics & RUL**: Degradation modeling and Remaining Useful Life forecasting under varying cycling and temperature profiles.
-- **Hardware-in-the-Loop & Virtual Testbench**: Ability to run full digital twin validation with or without physical hardware present.
+### Live Telemetry Dashboard (`/ui`)
+- **Connection status panel** with heartbeat and stale-data detection.
+- **Data source and mode indicator** — `LIVE` hardware vs. `MOCK`.
+- **Voltage (V), Current (A), Power (W = V × I), Temperature (°C)**.
+- **SOC (%)** and **SOH (%)** from validated EKF and Coulomb-counting estimators.
+- **Cell-wise voltage** panel when individual cell readings are available.
+- **Historical time-series charts** with configurable time ranges.
+- **Telemetry event timeline** with data-quality badges.
+- **JSON / CSV telemetry export** for offline analysis.
+
+### Hardware & Arduino Page
+Navigate to **Hardware & Arduino** in the sidebar:
+- **Firmware Workspace**: Upload, view, edit, and verify `.ino` sketches.
+- **Board Configuration**: Port selector, baud rate, data format, sensor mappings.
+- **Live Serial Console**: Scrolling real-time incoming bytes and parsed records.
+- **Connection Metrics**: Frames received, parse errors, sample rate, last-valid timestamp.
+- **Firmware Flash** (requires local `arduino-cli`): Explicit user-initiated compile + upload.
+
+### Mock Generator Page
+Navigate to **Mock Generator** in the sidebar:
+- **Isolated synthetic telemetry** — never mixed with live hardware data.
+- **Configurable parameters**: Voltage range, current, temperature, sample interval, noise.
+- **Fault injection**: Overvoltage spike, thermal runaway, under-voltage, bad frame.
+- **Deterministic seed** support for repeatable automated testing.
+- **Clear MOCK badge** visible at all times when active.
 
 ---
 
-## 7. Planned Technology Areas
+## 8. Arduino Hardware Integration
 
-- **Core & Analytics Engine**: Python 3.11+, NumPy, SciPy, Pandas, PyBaMM (Electrochemical modeling)
-- **State Estimation & Filtering**: FilterPy, custom Kalman Filter implementations
-- **Backend & Ingestion Services**: FastAPI, Pydantic (data validation), Uvicorn, asyncio
-- **Message Broker & Telemetry**: Eclipse Mosquitto (MQTT), python-can, PySerial
-- **Data Storage**: TimescaleDB / PostgreSQL (time-series & metadata), Redis (real-time cache & message streaming)
-- **Frontend & Visualization**: Modern TypeScript / React, Vite, Tailwind CSS, Recharts / ECharts, Three.js (for pack 3D cell visualization)
-- **Infrastructure & Tooling**: Docker, Docker Compose, pytest, Ruff, mypy
+For full setup instructions, see [docs/hardware-and-arduino-integration.md](docs/hardware-and-arduino-integration.md).
 
----
+**Workflow summary:**
+1. Connect your Arduino / ESP32 to the computer via USB.
+2. Open the Hardware page in the TwinVolt dashboard.
+3. Select your serial port (e.g., `COM3` on Windows, `/dev/ttyUSB0` on Linux).
+4. Select baud rate (`115200`).
+5. Choose data format (`Auto`, `JSON Lines`, or `CSV`).
+6. Click **Connect** — live telemetry flows through the digital twin pipeline.
 
-## 8. Development Methodology
+**Supported serial formats:**
 
-TwinVolt follows a disciplined, test-driven, and milestone-oriented software engineering lifecycle:
+JSON Lines (recommended):
+```json
+{"timestamp_ms":1000,"voltage_V":3.725,"current_A":-0.45,"temperature_C":25.3}
+```
 
-1. **Architecture-First**: Every module is defined by explicit interfaces and contracts before implementation.
-2. **Strict Incremental Stages**: Work progresses through documented, verifiable subtasks (Milestone 0 through Milestone N).
-3. **Type Safety & Validation**: Comprehensive type hints (Python `typing`, Pydantic, TypeScript) and linting across all codebases.
-4. **Contract-Driven Communication**: Canonical data schemas act as single sources of truth across ingestion, core modeling, and frontend visualization.
-5. **Continuous Verification**: Unit tests, integration tests, and synthetic data regression tests accompany all functional changes.
-6. **Rigorous Git & Workflow Governance**: Adherence to Conventional Commits, branch protection, PR checklists, and release lifecycles — see [docs/git-workflow.md](docs/git-workflow.md).
+CSV (compact):
+```
+1000,3.725,-0.450,25.3
+```
+
+A reference firmware sketch is available at `firmware/arduino/TwinVolt_Arduino_Example.ino`.
+
+> [!NOTE]
+> **Serial Port Boundary**: A remotely hosted web server cannot directly access a USB serial port on a client's local machine. The TwinVolt backend **must run locally** on the machine physically connected to the Arduino.
 
 ---
 
 ## 9. Repository Structure
 
 ```text
-TwinVolt-Digital-Twin/
+TwinVolt-Battery-Digital-Twin/
 │
-├── README.md               # Root platform documentation & architectural overview
-├── LICENSE                 # MIT open-source license
-├── .gitignore              # Multi-stack Git ignore rules
-├── .env.example            # Template configuration & environment variables
+├── README.md
+├── LICENSE
+├── .gitignore
+├── .env.example                # Environment configuration template
+├── requirements.txt            # Python dependencies
 │
-├── docs/                   # System specifications, architecture decisions & guides
-│   └── README.md
+├── firmware/
+│   └── arduino/
+│       ├── README.md                       # Protocol specification
+│       ├── TwinVolt_Arduino_Example.ino    # Reference sketch
+│       └── protocol_examples/              # JSON Lines and CSV traces
 │
-├── src/                    # Production source code (Core, Adapters, Estimation, API)
-│   └── README.md
+├── docs/
+│   ├── hardware-and-arduino-integration.md # Hardware setup guide
+│   ├── configuration.md
+│   ├── testing-strategy.md
+│   └── ...
 │
-├── tests/                  # Test suites (Unit, Integration, Simulation, HIL)
-│   └── README.md
+├── src/
+│   ├── api/
+│   │   └── routes/
+│   │       ├── gateway.py      # Hardware connection endpoints
+│   │       ├── firmware.py     # Firmware workspace endpoints
+│   │       ├── mock.py         # Mock generator endpoints
+│   │       └── ...
+│   ├── gateway/
+│   │   └── arduino/            # USB serial gateway module
+│   │       ├── models.py
+│   │       ├── frame_parser.py
+│   │       ├── serial_transport.py
+│   │       └── connection_manager.py
+│   ├── services/
+│   │   ├── mock_service.py     # Isolated mock telemetry generator
+│   │   ├── telemetry_service.py
+│   │   └── ...
+│   ├── domain/                 # Battery domain models
+│   ├── models/                 # Physics and ECM models
+│   └── ui/                     # Frontend dashboard
+│       ├── index.html
+│       ├── css/
+│       └── js/views/
+│           ├── hardware.js
+│           ├── mock.js
+│           └── telemetry.js
 │
-└── scripts/                # Development, setup, profiling & maintenance scripts
-    └── README.md
+└── tests/
+    └── unit/
+        ├── gateway/
+        │   ├── test_arduino_frame_parser.py        # 8 tests
+        │   └── test_arduino_connection_manager.py  # 2 tests
+        ├── services/
+        │   └── test_mock_service.py                # 3 tests
+        └── api/
+            └── test_hardware_and_firmware_api.py   # 7 tests
 ```
 
 ---
 
-## 10. Testing Philosophy
+## 10. Key API Endpoints
 
-TwinVolt considers robust automated testing foundational for safety-critical battery engineering:
+| Endpoint | Description |
+| :--- | :--- |
+| `GET /api/v1/gateway/serial/ports` | List detected COM ports |
+| `POST /api/v1/gateway/arduino/connect` | Connect to serial port |
+| `POST /api/v1/gateway/arduino/disconnect` | Disconnect |
+| `GET /api/v1/gateway/arduino/status` | Connection state and metrics |
+| `GET /api/v1/firmware/files` | List firmware workspace sketches |
+| `POST /api/v1/firmware/upload` | Upload `.ino` file |
+| `POST /api/v1/firmware/verify` | Static syntax verification |
+| `POST /api/v1/firmware/flash` | Flash via arduino-cli |
+| `GET /api/v1/mock/status` | Mock generator status |
+| `POST /api/v1/mock/start` | Start mock streaming |
+| `POST /api/v1/mock/stop` | Stop mock streaming |
+| `POST /api/v1/mock/inject-error` | Inject fault conditions |
 
-- **Unit Testing**: Isolated verification of mathematical algorithms, filtering routines, OCV-SOC lookup tables, and canonical data validators.
-- **Synthetic Simulation Testing**: Running the Digital Twin against standardized synthetic drive cycles (e.g., WLTP, US06) and constant-current constant-voltage (CCCV) load profiles to verify mathematical stability.
-- **Integration Testing**: End-to-end verification of telemetry ingestion, message queues, time-series persistence, and API endpoints.
-- **Fault Injection Testing**: Simulating packet drops, sensor noise, voltage spikes, and sudden temperature jumps to validate anomaly detection resilience.
-- **Hardware-in-the-Loop (HIL) Testing**: Testing against bench hardware via hardware-agnostic communication adapters.
+WebSocket: `ws://127.0.0.1:8000/api/v1/telemetry/ws`
 
 ---
 
-## 11. Hardware Integration Philosophy
+## 11. Security Considerations
 
-TwinVolt is fundamentally **hardware-independent**. 
-
-- Physical hardware (e.g., custom BMS prototypes, commercial battery packs, laboratory cyclers) interacts with TwinVolt solely via **Data Acquisition Adapters**.
-- Any specific hardware prototype—such as a small 2S/3S Li-ion prototype testbench—is treated strictly as **one external telemetry provider and validation source**.
-- No hardware-specific constraints, hardcoded cell counts, pinouts, or bespoke protocols will ever be embedded within the core Digital Twin domain models or state estimation algorithms.
+> [!WARNING]
+> TwinVolt is designed for **local development and trusted lab networks**. Before exposing to untrusted networks:
+> - Enable authentication and HTTPS.
+> - Restrict CORS origins in `src/api/app.py`.
+> - Do not expose serial port or administrative endpoints publicly.
+> - Uploaded `.ino` files are treated as untrusted source text only; they are never executed directly.
 
 ---
 
-## 12. License
+## 12. Testing Philosophy
+
+- **Unit Testing**: Mathematical algorithms, OCV-SOC tables, schema validators.
+- **Integration Testing**: Telemetry ingestion, API endpoints, WebSocket streams.
+- **Fault Injection**: Malformed frames, NaN values, disconnections, stale data.
+- **Synthetic Simulation**: Drive-cycle and CCCV profile verification.
+
+**Total tests: 891 | All passing | No physical hardware required.**
+
+---
+
+## 13. Hardware Safety Notice
+
+> [!CAUTION]
+> TwinVolt is an analytics and digital twin monitoring platform.
+> It is **not** a replacement for hardware-level battery protection.
+> The physical BMS must maintain independent overvoltage, undervoltage, overcurrent, and thermal cutoff protections. Do not bypass hardware protection circuits when interfacing with TwinVolt.
+
+---
+
+## 14. License
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.

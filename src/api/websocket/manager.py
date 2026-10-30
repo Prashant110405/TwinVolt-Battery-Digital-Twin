@@ -10,7 +10,7 @@ import uuid
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
-from src.api.websocket.schemas import WSConnectedMessage, WSTwinEventMessage
+from src.api.websocket.schemas import WSConnectedMessage, WSTwinEventMessage, WSTwinStateMessage
 from src.events.base import AbstractEventBus, TwinEvent
 
 
@@ -43,6 +43,102 @@ class WebSocketConnectionManager:
             if self._loop and self._loop.is_running():
                 sys_id = getattr(event, "system_id", None) or getattr(event, "source_id", None)
                 if sys_id:
+                    # Bridge TwinSynchronizedEvent into WSTwinStateMessage
+                    if getattr(event, "event_type", "") == "twin.synchronized":
+                        sync_out = getattr(event, "sync_output", None)
+                        rec = getattr(event, "twin_record", None)
+                        state_msg = None
+
+                        if sync_out is not None:
+                            est_soc = (
+                                sync_out.estimation_output.state.soc_fraction
+                                if sync_out.estimation_output is not None
+                                else None
+                            )
+                            v_res = sync_out.residuals.get("voltage_residual_v") if sync_out.residuals else None
+                            t_res = (
+                                sync_out.residuals.get("temperature_residual_c")
+                                or sync_out.residuals.get("temp_residual_c")
+                                if sync_out.residuals
+                                else None
+                            )
+
+                            soh = None
+                            if sync_out.telemetry and sync_out.telemetry.soh_fraction is not None:
+                                soh = sync_out.telemetry.soh_fraction
+                            elif "soh_unified_fraction" in sync_out.diagnostics:
+                                soh = sync_out.diagnostics["soh_unified_fraction"]
+
+                            source = None
+                            if sync_out.telemetry and sync_out.telemetry.metadata:
+                                source = sync_out.telemetry.metadata.get("source")
+
+                            diag = dict(sync_out.diagnostics)
+                            if sync_out.telemetry:
+                                diag["telemetry_voltage_v"] = sync_out.telemetry.pack_voltage_v
+                                diag["telemetry_current_a"] = sync_out.telemetry.pack_current_a
+                                diag["telemetry_temperature_c"] = (
+                                    sync_out.telemetry.avg_cell_temperature_c
+                                    if sync_out.telemetry.avg_cell_temperature_c is not None
+                                    else sync_out.telemetry.ambient_temperature_c
+                                )
+                                if sync_out.telemetry.soc_fraction is not None:
+                                    diag["telemetry_soc_fraction"] = sync_out.telemetry.soc_fraction
+                                if sync_out.telemetry.soh_fraction is not None:
+                                    diag["telemetry_soh_fraction"] = sync_out.telemetry.soh_fraction
+                                if sync_out.telemetry.metadata:
+                                    diag["battery_status"] = sync_out.telemetry.metadata.get("battery_status")
+
+                            state_msg = WSTwinStateMessage(
+                                system_id=sys_id,
+                                step_index=sync_out.step_index,
+                                timestamp_ns=sync_out.timestamp_ns,
+                                dt_s=sync_out.dt_s,
+                                terminal_voltage_v=sync_out.model_output.terminal_voltage_v,
+                                simulated_soc=sync_out.model_output.state.soc_fraction,
+                                estimated_soc=est_soc,
+                                soh_unified_fraction=soh,
+                                source=source,
+                                temperature_c=sync_out.model_output.state.temperature_c,
+                                voltage_residual_v=v_res,
+                                temperature_residual_c=t_res,
+                                anomalies_count=sync_out.diagnostics.get("anomalies_count", 0),
+                                diagnostics=diag,
+                            )
+                        elif rec is not None:
+                            v_res = rec.residuals.get("voltage_residual_v") if rec.residuals else None
+                            t_res = (
+                                rec.residuals.get("temp_residual_c")
+                                or rec.residuals.get("temperature_residual_c")
+                                if rec.residuals
+                                else None
+                            )
+                            step_idx = int(rec.metadata.get("step_index", 0)) if rec.metadata else 0
+                            anom_count = int(rec.metadata.get("anomalies_count", 0)) if rec.metadata else 0
+                            source = rec.metadata.get("source") if rec.metadata else None
+
+                            state_msg = WSTwinStateMessage(
+                                system_id=sys_id,
+                                step_index=step_idx,
+                                timestamp_ns=rec.timestamp_ns,
+                                terminal_voltage_v=getattr(rec.model_state, "terminal_voltage_v", 0.0),
+                                simulated_soc=rec.model_state.soc_fraction if rec.model_state else 0.0,
+                                estimated_soc=rec.estimation_state.soc_fraction if rec.estimation_state else None,
+                                soh_unified_fraction=rec.estimation_state.soh_fraction if rec.estimation_state else None,
+                                source=source,
+                                temperature_c=rec.model_state.temperature_c if rec.model_state else 25.0,
+                                voltage_residual_v=v_res,
+                                temperature_residual_c=t_res,
+                                anomalies_count=anom_count,
+                                diagnostics={},
+                            )
+
+                        if state_msg is not None:
+                            asyncio.run_coroutine_threadsafe(
+                                self.broadcast_to_twin(sys_id, state_msg),
+                                self._loop,
+                            )
+
                     msg = WSTwinEventMessage(
                         system_id=sys_id,
                         event_type=event.event_type,
